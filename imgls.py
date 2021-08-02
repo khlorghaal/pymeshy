@@ -61,7 +61,6 @@ glDispatchCompute(w//2,h//2,1)
 glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
 del rast
 rast= glGetTexImage(GL_TEXTURE_2D, 0,GL_RGBA,GL_FLOAT)
-print(rast)
 
 fb= glGenFramebuffers(1)
 glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
@@ -71,9 +70,20 @@ glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
 
 pygame.display.flip()
 
+import png
+print(rast.shape)
+rast= rast*(-1+2**16)
+rast= rast.astype(np.uint16).flatten()
+print(rast.shape)
+w= png.Writer(
+	size=(w,h),
+	bitdepth=16,#!!16
+	greyscale=False,
+	alpha= True,
+	compression=9
+	)
+w.write_array( open('./out.png','wb'), rast )
+#img= png.fromarray(rast,mode="RGBA").save('./out.png')
 
-
-while(1):
-	for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                exit()
+from time import sleep
+sleep(1.) 
