@@ -59,16 +59,18 @@ glUseProgram(prog)
 #texsubdata is coherent glMemoryBarrier( GL_TEXTURE_UPDATE_BARRIER_BIT )
 glDispatchCompute(w//2,h//2,1)
 glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
-glGetTexImage(GL_TEXTURE_2D, 0,GL_RGBA,GL_FLOAT, rast)
+del rast
+rast= glGetTexImage(GL_TEXTURE_2D, 0,GL_RGBA,GL_FLOAT)
+print(rast)
 
 fb= glGenFramebuffers(1)
 glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
 glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,tex, 0)
-
 glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
 
 pygame.display.flip()
+
 
 
 while(1):
