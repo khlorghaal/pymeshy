@@ -20,6 +20,7 @@ from pygame.locals import *
 import ctypes as ct
 from OpenGL.GL import *
 from OpenGL.GL import shaders
+from OpenGL.GL.EXT.texture_filter_anisotropic import *
 
 pygame.init()
 resolution= (w,h)
@@ -28,15 +29,16 @@ pygame.display.set_caption('____________________________')
 
 with open("imgls.comp.glsl") as f:
 	csh_src= f.read()
-def prog(s):
+def prog(m):
 	try:
-		head= '''
-		#version 450
-		#define %s 1
-		#line 1
-		'''%s
-		csh_sh= shaders.compileShader(head+csh_src, GL_COMPUTE_SHADER)
-		return shaders.compileProgram(csh_sh)
+		csh_src_p= ''.join([
+			'#version 450\n',
+			*['#define %s 1\n'%d for d in m],
+			'#line 1\n',
+			csh_src
+		])
+		csh_sh= shaders.compileShader(csh_src_p, GL_COMPUTE_SHADER)
+		return (shaders.compileProgram(csh_sh),m)
 	except Exception as e:
 		print('\nSHADERROR\n')
 		e= str(e)
@@ -51,27 +53,41 @@ def prog(s):
 		#sublime default error regex
 		print(e)
 		exit()
-progs= list(map(prog,['STAGE0','STAGE1','STAGE1']))
-print(progs)
+progs= list(map(prog,[
+	['STAGE_GEOMAG'],
+	['STAGE_FLARE']*20,
+	['STAGE_TONEMAP']
+	]))
 
-_pingpong= glGenTextures(2)
-for i,pp in enumerate(_pingpong):
+textures= glGenTextures(3)
+_pingpong= textures[:2]
+tex_basis= textures[ 2]
+for i,pp in enumerate(textures):
 	glBindTexture(GL_TEXTURE_2D,pp)
-	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, w,h)#uninitialized
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-	glTexSubImage2D(GL_TEXTURE_2D, 0,0,0,w,h, GL_RGBA,GL_FLOAT, rast);
+	glTexStorage2D(GL_TEXTURE_2D, 2, GL_RGBA16F, w,h)#memory uninitialized, inits mipmap level range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)#GL_LINEAR_MIPMAP_LINEAR)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8)
 
 
 wg= (w//8,h//8,1)
 for p in progs:
+	(p,args)= p
 	glUseProgram(p)
-	glUniform2f(2,w,h)
-	glUniform2i(3,w,h)
+	glUniform2f(0,w,h)
+	glUniform2i(1,w,h)
 
-	_pingpong= _pingpong[::-1]
-	glBindTexture(GL_TEXTURE_2D,_pingpong[0])
-	glBindImageTexture(1,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
+
+	if 'STAGE_GEOMAG' in args:
+		glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
+	else:
+		_pingpong= _pingpong[::-1]
+		glActiveTexture(GL_TEXTURE0+1)
+		glBindTexture(GL_TEXTURE_2D,tex_basis)
+		glActiveTexture(GL_TEXTURE0+0)
+		glBindTexture(GL_TEXTURE_2D,_pingpong[0])
+		glGenerateMipmap(GL_TEXTURE_2D)
+		glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
 
 	glDispatchCompute(*wg)
 	glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
@@ -93,7 +109,7 @@ rast= rast.astype(np.uint16).flatten()
 print(rast.shape)
 w= png.Writer(
 	size=(w,h),
-	bitdepth=16,#!!16
+	bitdepth=16,
 	greyscale=False,
 	alpha= True,
 	compression=8
