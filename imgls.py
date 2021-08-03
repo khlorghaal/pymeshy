@@ -53,9 +53,10 @@ def prog(m):
 		#sublime default error regex
 		print(e)
 		exit()
+FLARE_PASSES= 64
 progs= list(map(prog,[
 	['STAGE_GEOMAG'],
-	['STAGE_FLARE']*20,
+	*([['STAGE_FLARE']]*FLARE_PASSES),
 	['STAGE_TONEMAP']
 	]))
 
@@ -64,9 +65,10 @@ _pingpong= textures[:2]
 tex_basis= textures[ 2]
 for i,pp in enumerate(textures):
 	glBindTexture(GL_TEXTURE_2D,pp)
-	glTexStorage2D(GL_TEXTURE_2D, 2, GL_RGBA16F, w,h)#memory uninitialized, inits mipmap level range
+	MIPS= 2
+	glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA32F, w,h)#memory uninitialized, inits mipmap level range
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)#GL_LINEAR_MIPMAP_LINEAR)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8)
 
 
@@ -79,15 +81,18 @@ for p in progs:
 
 
 	if 'STAGE_GEOMAG' in args:
-		glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
+		glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
 	else:
 		_pingpong= _pingpong[::-1]
-		glActiveTexture(GL_TEXTURE0+1)
-		glBindTexture(GL_TEXTURE_2D,tex_basis)
+
 		glActiveTexture(GL_TEXTURE0+0)
 		glBindTexture(GL_TEXTURE_2D,_pingpong[0])
 		glGenerateMipmap(GL_TEXTURE_2D)
-		glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
+
+		glActiveTexture(GL_TEXTURE0+1)
+		glBindTexture(GL_TEXTURE_2D,tex_basis)
+
+		glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
 
 	glDispatchCompute(*wg)
 	glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )

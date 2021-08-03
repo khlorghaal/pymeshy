@@ -1,3 +1,5 @@
+
+//Aliases
 #define vec1 float
 #define ivec1 int
 #define uvec1 uint
@@ -6,6 +8,16 @@
 #define norm normalize
 #define sat saturate
 #define sats saturate_signed
+
+//Consts
+#define PI  3.14159265359
+#define TAU (PI*2.)
+#define PHI 1.61803399
+#define deg2rad 0.01745329251
+#define SQRT2 (sqrt(2.))
+#define BIG 1e8
+#define ETA 1e-4
+#define eqf(a,b) ( abs((a)-(b))<ETA )
 
 #define count(_n) for(int i=0; i!=_n; i++)
 
@@ -80,9 +92,11 @@ layout(binding=0, rgba16f) writeonly restrict uniform image2D img_o;
 #else
 	layout(binding=0) uniform sampler2D img_i;
 	layout(binding=1) uniform sampler2D img_basis;
+		//	+textureGrad(img_basis,uv,     vec2(2.5,0.),vec2(0.,2.5))
+		//+textureGrad(img_i,    uv,     vec2(1.5.x,0.),vec2(0.,1.5))
 	#define sample(uv) (\
-		+textureGrad(img_i,uv, vec2(1.5/res.x,0.),vec2(0.,1.5/res.y))\
-		+textureGrad(img_basis,uv, vec2(1.5/res.x,0.),vec2(0.,1.5/res.y))\
+		+textureLod(img_basis,uv,1)\
+		+textureLod(img_i,    uv,1)\
 		)
 		//FIXME actually use uv grad lol
 #endif
@@ -101,7 +115,7 @@ layout(
 	//shared vec4 sh[8][8];
 #endif
 
-const vec2 center= vec2(.5);
+const vec2 center= vec2(.5,.65);
 
 void main(){
 	ivec2 iuv= ivec2(gl_GlobalInvocationID.xy);
@@ -127,10 +141,14 @@ void main(){
 	#ifdef STAGE_GEOMAG
 
 		float h= vnse_2i_1f(iuv);
-		h= step(h,.002);//star concentration
+		h= step(h,.05);//star concentration
 
+		//magnitude distribution
 		float m= vnse_2i_1f(iuv+INT_HALFMAX);
-		m= 64.*exp(-m*m*2.8);//magnitude distribution
+		{
+			//gaussian... nevermind fuck gaussian
+			m= pow(m,512.)*.999+.001;
+		}
 
 		float l= m*h;
 
@@ -145,8 +163,8 @@ void main(){
 			vec2 n= norm(d);
 			vec2 t= n.yx; t.y=-t.y;
 			col= bb;
-			const int I= 16;
-			const vec2 rad= 12./(res*I);
+			const int I= 3;
+			const vec2 rad= 3./(res*I);
 			vec4 flare= vec4(0.);
 			count(I){
 				vec2 r= rad*i;
@@ -159,14 +177,16 @@ void main(){
 
 				flare+= acc;
 			}
-			flare/= I*2.;//normalize
-			flare*= 4.5;//magnitude
-			col+= bb+flare;
+			flare/= I*4.;//normalize
+			//flare*= pow(.99,-8.);//magnitude
+			flare*= .9;
+			col= bb+flare;
 		}
 	#elif STAGE___
 		col= vec4(0.,uv,1.);
 	#elif STAGE_TONEMAP
-		col= bb;
+		const float EXPOSURE= 64.;
+		col= 1.-1./(bb*EXPOSURE+1.);
 	#else
 		#error no stage #defined
 	#endif
