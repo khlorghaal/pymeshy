@@ -14,8 +14,6 @@ except:
 	h= 1080
 	rast= np.zeros(w*h*4)
 
-#shove into rgba16f
-
 import pygame
 from pygame.locals import *
 
@@ -53,24 +51,26 @@ def prog(s):
 		#sublime default error regex
 		print(e)
 		exit()
-progs= list(map(prog,['STAGE0','STAGE1','STAGE2']))
+progs= list(map(prog,['STAGE0','STAGE1','STAGE1']))
 print(progs)
 
 _pingpong= glGenTextures(2)
 for i,pp in enumerate(_pingpong):
 	glBindTexture(GL_TEXTURE_2D,pp)
 	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16F, w,h)#uninitialized
-	#glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-	#glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 	glTexSubImage2D(GL_TEXTURE_2D, 0,0,0,w,h, GL_RGBA,GL_FLOAT, rast);
 
 
 wg= (w//8,h//8,1)
 for p in progs:
 	glUseProgram(p)
+	glUniform2f(2,w,h)
+	glUniform2i(3,w,h)
 
 	_pingpong= _pingpong[::-1]
-	glBindImageTexture(0,_pingpong[0], 0,False,0, GL_READ_ONLY,  GL_RGBA16F)
+	glBindTexture(GL_TEXTURE_2D,_pingpong[0])
 	glBindImageTexture(1,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
 
 	glDispatchCompute(*wg)
@@ -81,6 +81,7 @@ glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
 glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,_pingpong[1], 0)
 glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
+
 del rast
 rast= glReadPixels(0,0,w,h, GL_RGBA,GL_FLOAT)
 
@@ -98,9 +99,9 @@ w= png.Writer(
 	compression=8
 	)
 
-w.write_array( open('./out.png','wb'), rast )
+#w.write_array( open('./out.png','wb'), rast )
 
-#while(1):
-#	for event in pygame.event.get():
-#            if event.type == pygame.QUIT:
-#                exit()
+while(1):
+	for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()

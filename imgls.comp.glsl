@@ -61,25 +61,27 @@ float vnse_2i_1f(ivec2 p){return nmapu(hash_i_f(hash_i_i(p.x)+hash_i_i(p.y)));}
 
 
 
-layout(binding=0, location=0, rgba16f) readonly  restrict uniform image2D img_i;
+//layout(binding=0, location=0, rgba16f) readonly  restrict uniform image2D img_i;
+layout(binding=0, location=0) uniform sampler2D img_i;
 layout(binding=1, location=1, rgba16f) writeonly restrict uniform image2D img_o;
+
+layout(location=2) uniform  vec2  res;
+layout(location=3) uniform ivec2 ires;
 
 //"Store operations to any texel that is outside the boundaries of the bound image will do nothing."
 layout(
-		local_size_x= 8,//dfdxy
-		local_size_y= 8,
-		local_size_z= 1
-		) in;
+	local_size_x= 8,//dfdxy
+	local_size_y= 8,
+	local_size_z= 1
+	) in;
 
 #ifndef STAGE0
 	shared vec4 sh[8][8];
 #endif
 
 void main(){
-	uvec2 ires= imageSize(img_i);
-	vec2 res= vec2(ires);
 	ivec2 iuv= ivec2(gl_GlobalInvocationID.xy);
-	 vec2  uv=  vec2(iuv)/res;
+	 vec2  uv=  vec2(iuv+.5)/res;
 
 	vec4 col;
 
@@ -99,27 +101,34 @@ void main(){
 		uvec2 gid= gl_GlobalInvocationID.xy;
 		uvec2 lid=  gl_LocalInvocationID.xy;
 		uvec2 lsz= gl_WorkGroupSize.xy;
-		sh[lid.x][lid.y]= imageLoad(img_i,ivec2(gid));
+		vec4 bb= texelFetch(img_i,ivec2(gid),0);
+		sh[lid.x][lid.y]= bb;
 		barrier();
 		{
 			vec2 uv= uv;
 
-			uv= uv+ .1;
+			uv= uv+ .01;
 
+			//textureGrad(img_i,uv,vec2(4./res.x,0.),vec2(0.,4./res.y))
+
+			#define sample(uv) textureLod(img_i,uv,0)
+			col= bb+sample(uv);
+			/*
 			ivec2 iuv= ivec2(uv*res);
 			vec2 st= fract(uv*res);
-			uvec2 i0= iuv;
+			uvec2 i0= lid;//iuv-(gid*lsz);
 			uvec2 i1= i0+1;
 			vec4 nn= sh[i0.x][i0.y];
 			vec4 np= sh[i0.x][i1.y];
 			vec4 pn= sh[i1.x][i0.y];
 			vec4 pp= sh[i1.x][i1.y];
 			vec4 samp= bilerp(st,nn,np,pn,pp);
+			col= samp;*/
+
+			//col= sh[lid.x][lid.y];
 		}
-		col= vec4(0.,uv,1.);
 	#elif STAGE2
 		col= vec4(0.,uv,1.);
-
 	#else
 		#error no stage #defined
 	#endif
