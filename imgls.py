@@ -10,8 +10,8 @@ try:
 	rast= img.raster.flatten()
 	assert(len(rast)==w*h*4)
 except:
-	w= 1080
-	h= 1080
+	w= 2560
+	h= 1440
 	rast= np.zeros(w*h*4)
 
 import pygame
@@ -56,7 +56,7 @@ def prog(m):
 
 progs= list(map(prog,[
 	['STAGE_GEOMAG'],
-	*([['STAGE_FLARE']]*4),
+	*([['STAGE_FLARE']]*5),
 	['STAGE_TONEMAP']
 	]))
 
@@ -69,7 +69,7 @@ for i,pp in enumerate(textures):
 	glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA32F, w,h)#memory uninitialized, inits mipmap level range
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4)
 
 
 wg= (w//8,h//8,1)
@@ -114,7 +114,7 @@ rast= rast.astype(np.uint16).flatten()
 print(rast.shape)
 w= png.Writer(
 	size=(w,h),
-	bitdepth=16,
+	bitdepth=8,
 	greyscale=False,
 	alpha= True,
 	compression=8

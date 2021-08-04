@@ -44,6 +44,38 @@ float prod( vec4 v){ return v.x*v.y*v.z*v.w;}
   int prod(ivec3 v){ return v.x*v.y*v.z;}
   int prod(ivec4 v){ return v.x*v.y*v.z*v.w;}
 
+float maxv( vec2 a){ return                 max(a.x,a.y)  ;}
+float maxv( vec3 a){ return         max(a.z,max(a.x,a.y)) ;}
+float maxv( vec4 a){ return max(a.w,max(a.z,max(a.x,a.y)));}
+float minv( vec2 a){ return                 min(a.x,a.y)  ;}
+float minv( vec3 a){ return         min(a.z,min(a.x,a.y)) ;}
+float minv( vec4 a){ return min(a.w,min(a.z,min(a.x,a.y)));}
+  int maxv(ivec2 a){ return                 max(a.x,a.y)  ;}
+  int maxv(ivec3 a){ return         max(a.z,max(a.x,a.y)) ;}
+  int maxv(ivec4 a){ return max(a.w,max(a.z,max(a.x,a.y)));}
+  int minv(ivec2 a){ return                 min(a.x,a.y)  ;}
+  int minv(ivec3 a){ return         min(a.z,min(a.x,a.y)) ;}
+  int minv(ivec4 a){ return min(a.w,min(a.z,min(a.x,a.y)));}
+
+//normalized map to signed
+//[ 0,1]->[-1,1]
+vec1 nmaps(vec1 x){ return x*2.-1.; }
+vec2 nmaps(vec2 x){ return x*2.-1.; }
+vec3 nmaps(vec3 x){ return x*2.-1.; }
+vec4 nmaps(vec4 x){ return x*2.-1.; }
+//normalized map to unsigned
+//[-1,1]->[ 0,1]
+vec1 nmapu(vec1 x){ return x*.5+.5; }
+vec2 nmapu(vec2 x){ return x*.5+.5; }
+vec3 nmapu(vec3 x){ return x*.5+.5; }
+vec4 nmapu(vec4 x){ return x*.5+.5; }
+
+//[0,1]
+float saw(float x){ return mod(x,1.); }
+float tri(float x){ return abs( mod(x,2.) -1.); }
+  int tri(int x, int a){ return abs( abs(x%(a*2))-a ); }
+
+
 //normalized map to signed
 //[ 0,1]->[-1,1]
 #define nmaps(v) ((v)*2.-1.)
@@ -63,7 +95,12 @@ float prod( vec4 v){ return v.x*v.y*v.z*v.w;}
 #define hash_f_f(x) (v_i_f(hash_i_i(v_f_i(x)))/INT_MAX)
 #define hash_i_f(x) (v_i_f(hash_i_i(     (x)))/INT_MAX)
 
-float vnse_2i_1f(ivec2 p){return nmapu(hash_i_f(hash_i_i(p.x)+hash_i_i(p.y)));}
+float vnse_2i_1f(ivec2 p){return nmapu(hash_i_f(hash_i_i(p.x+p.y)+hash_i_i(p.y)));}
+vec3  vnse_2i_3f(ivec2 p){return nmapu(
+	vec3(
+		hash_i_f(hash_i_i(p.x    )+hash_i_i(p.y    )),
+		hash_i_f(hash_i_i(p.x+p.y)+hash_i_i(p.y    )),
+		hash_i_f(hash_i_i(p.x    )+hash_i_i(p.y-p.x))));}
 
 #define bilerp(st,nn,np,pn,pp) \
 	lerp(\
@@ -71,17 +108,6 @@ float vnse_2i_1f(ivec2 p){return nmapu(hash_i_f(hash_i_i(p.x)+hash_i_i(p.y)));}
 		lerp(np,pp,st.x),\
 		st.y)
 
-			/*
-			ivec2 iuv= ivec2(uv*res);
-			vec2 st= fract(uv*res);
-			uvec2 i0= lid;//iuv-(gid*lsz);
-			uvec2 i1= i0+1;
-			vec4 nn= sh[i0.x][i0.y];
-			vec4 np= sh[i0.x][i1.y];
-			vec4 pn= sh[i1.x][i0.y];
-			vec4 pp= sh[i1.x][i1.y];
-			vec4 samp= bilerp(st,nn,np,pn,pp);
-			col= samp;*/
 
 
 
@@ -117,11 +143,12 @@ layout(
 	//shared vec4 sh[8][8];
 #endif
 
-const vec2 center= vec2(.5,.65);
-
 void main(){
 	ivec2 iuv= ivec2(gl_GlobalInvocationID.xy);
 	 vec2  uv=  vec2(iuv+.5)/res;
+	 vec2 uvn= uv;
+	 uvn= nmaps(uvn);
+	 uvn.x*=(res.x/res.y);
 
 	vec4 col;
 
@@ -141,61 +168,96 @@ void main(){
 
 
 	#ifdef STAGE_GEOMAG
-
+	{
 		float h= vnse_2i_1f(iuv);
-		h= step(h,.05);//star concentration
+		h= step(h,.04);//star concentration
 
 		//magnitude distribution
 		float m= vnse_2i_1f(iuv+INT_HALFMAX);
 		{
 			//gaussian... nevermind fuck gaussian lol
-			float minmag= .05;
-			m= pow(m,11.)*(1.-minmag)+minmag;
+			float minmag= .015;//coupled to fuck by exposure and fucking everything else
+			m+= .002;//make bright very bright
+			m= pow(m,222.)*(1.-minmag)+minmag;
 		}
 
 		float l= m*h;
-		col= vec4(vec3(l),1.);
-
+		col= vec4(l*vnse_2i_3f(iuv)*vec3(1.,3.,1.3),1.);
+		col.a= l;
+	}
 	#elif STAGE_FLARE
-		barrier();
+	{
+		const vec2 focus= vec2(0.,.4);
+		vec2 uv= uv;
+		vec2 d= uvn-focus;
+		vec2 n= norm(d);
+		const float ld= len(d);
+		//n/= 1.-pow(ld,.2);
+		//n*= 1.-1./(1.+ld*4.);
+		vec2 t= n.yx; t.y=-t.y;
+		col= bb;
+		const int I= 64;
+		const int K= 0;
+		const vec2 KMUL= res_rcp/K;
+		const vec2 rad= 1./res;
+		vec4 flare= vec4(0.);
 		{
-			vec2 uv= uv;
-			vec2 d= uv-center;
-			vec2 n= norm(d);
-			vec2 t= n.yx; t.y=-t.y;
-			col= bb;
-			const int I= 16;
-			const vec2 rad= 1./res;
-			vec4 flare= vec4(0.);
-
-			const int K= 1;
-			const vec2 KMUL= res_rcp/K;
 			count(I){
 				vec2 r= rad*i;
+				vec4 acc= vec4(0.);
 				for(int x=-K; x<=K; x++){
 					for(int y=-K; y<=K; y++){
 						const vec2 o= vec2(x,y)*KMUL;
-						flare+= 
+						acc+= 
 							+sample(uv + n*r + o )
 							+sample(uv - n*r + o )
 							+sample(uv + t*r + o )
 							+sample(uv - t*r + o );
 					}
 				}
+				//const float l= float(i);
+				const float mag= 1.;///(1.+l*.1);
+				flare+= acc*mag;
 			}
 			const int KDIA= (1+K*2);
-			flare/= I*KDIA*KDIA*4;//normalize
-			//flare*= pow(.99,-8.);//magnitude
-			flare*= .98;
-			col= bb+flare;
+			flare/= I*KDIA*4;//normalize
 		}
+
+		vec4 halo= vec4(0.);
+		{
+			const int K= 16;
+			const float rho= minv(res)/K*12.;//higher->more fade
+			const vec2 KMUL= res_rcp;
+			vec4 acc= vec4(0.);
+			for(int x=-K; x<=K; x++){
+				for(int y=-K; y<=K; y++){
+					const vec2 o= vec2(x,y)*KMUL;
+					const float l= len(o/KMUL);
+					const float mag= 1./(1.+l*188.);
+					acc+= sample(uv+o)*mag;
+				}
+			}
+			//const int KDIA= (1+K*2);
+			halo= acc;///(KDIA*KDIA*rho);
+		}
+
+		flare*= .9;//exponential decay or explosion
+		halo*= .9;
+		col= bb+flare+halo;
+	}
 	#elif STAGE___
+	{
 		col= vec4(0.,uv,1.);
+	}
 	#elif STAGE_TONEMAP
-		const float EXPOSURE= 1.;
+	{
+		const float EXPOSURE= 3.;
 		//col= 1.-1./(bb*EXPOSURE+1.);
 		col= 1.-exp(-bb*EXPOSURE);
 		//col= bb*EXPOSURE;
+		col.rgb/= max(1.,maxv(col.rgb));
+		col.a= bb.a;
+	}
 	#else
 		#error no stage #defined
 	#endif
