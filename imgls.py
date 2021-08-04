@@ -53,10 +53,10 @@ def prog(m):
 		#sublime default error regex
 		print(e)
 		exit()
-FLARE_PASSES= 64
+
 progs= list(map(prog,[
 	['STAGE_GEOMAG'],
-	*([['STAGE_FLARE']]*FLARE_PASSES),
+	*([['STAGE_FLARE']]*4),
 	['STAGE_TONEMAP']
 	]))
 
@@ -67,7 +67,7 @@ for i,pp in enumerate(textures):
 	glBindTexture(GL_TEXTURE_2D,pp)
 	MIPS= 2
 	glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA32F, w,h)#memory uninitialized, inits mipmap level range
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8)
 

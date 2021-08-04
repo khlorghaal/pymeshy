@@ -20,6 +20,7 @@
 #define eqf(a,b) ( abs((a)-(b))<ETA )
 
 #define count(_n) for(int i=0; i!=_n; i++)
+#define forc(i,_n) for(int i=0; i!=_n; i++)
 
  vec1 v_i_f(ivec1 v){return  vec1(v);}
  vec2 v_i_f(ivec2 v){return  vec2(v);}
@@ -95,8 +96,8 @@ layout(binding=0, rgba16f) writeonly restrict uniform image2D img_o;
 		//	+textureGrad(img_basis,uv,     vec2(2.5,0.),vec2(0.,2.5))
 		//+textureGrad(img_i,    uv,     vec2(1.5.x,0.),vec2(0.,1.5))
 	#define sample(uv) (\
-		+textureLod(img_basis,uv,1)\
-		+textureLod(img_i,    uv,1)\
+		+textureLod(img_basis,uv,0)\
+		+textureLod(img_i,    uv,0)\
 		)
 		//FIXME actually use uv grad lol
 #endif
@@ -104,6 +105,7 @@ layout(binding=0, rgba16f) writeonly restrict uniform image2D img_o;
 
 layout(location=0) uniform  vec2  res;
 layout(location=1) uniform ivec2 ires;
+const vec2 res_rcp= 1./res;	
 
 layout(
 	local_size_x= 8,
@@ -146,16 +148,15 @@ void main(){
 		//magnitude distribution
 		float m= vnse_2i_1f(iuv+INT_HALFMAX);
 		{
-			//gaussian... nevermind fuck gaussian
-			m= pow(m,512.)*.999+.001;
+			//gaussian... nevermind fuck gaussian lol
+			float minmag= .05;
+			m= pow(m,11.)*(1.-minmag)+minmag;
 		}
 
 		float l= m*h;
-
-		col= vec4(vec3(l),1.);//vec4(0.,uv,1.);
+		col= vec4(vec3(l),1.);
 
 	#elif STAGE_FLARE
-		//sh[lid.x][lid.y]= bb;
 		barrier();
 		{
 			vec2 uv= uv;
@@ -163,30 +164,38 @@ void main(){
 			vec2 n= norm(d);
 			vec2 t= n.yx; t.y=-t.y;
 			col= bb;
-			const int I= 3;
-			const vec2 rad= 3./(res*I);
+			const int I= 16;
+			const vec2 rad= 1./res;
 			vec4 flare= vec4(0.);
+
+			const int K= 1;
+			const vec2 KMUL= res_rcp/K;
 			count(I){
 				vec2 r= rad*i;
-				vec4 acc=
-					+sample(uv+n*r)
-					+sample(uv-n*r)
-					+sample(uv+t*r)
-					+sample(uv-t*r)
-					;
-
-				flare+= acc;
+				for(int x=-K; x<=K; x++){
+					for(int y=-K; y<=K; y++){
+						const vec2 o= vec2(x,y)*KMUL;
+						flare+= 
+							+sample(uv + n*r + o )
+							+sample(uv - n*r + o )
+							+sample(uv + t*r + o )
+							+sample(uv - t*r + o );
+					}
+				}
 			}
-			flare/= I*4.;//normalize
+			const int KDIA= (1+K*2);
+			flare/= I*KDIA*KDIA*4;//normalize
 			//flare*= pow(.99,-8.);//magnitude
-			flare*= .9;
+			flare*= .98;
 			col= bb+flare;
 		}
 	#elif STAGE___
 		col= vec4(0.,uv,1.);
 	#elif STAGE_TONEMAP
-		const float EXPOSURE= 64.;
-		col= 1.-1./(bb*EXPOSURE+1.);
+		const float EXPOSURE= 1.;
+		//col= 1.-1./(bb*EXPOSURE+1.);
+		col= 1.-exp(-bb*EXPOSURE);
+		//col= bb*EXPOSURE;
 	#else
 		#error no stage #defined
 	#endif
