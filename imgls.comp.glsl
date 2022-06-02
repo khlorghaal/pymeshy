@@ -591,7 +591,7 @@ int cbrti(int x){return int( pow(float(x),1./3.));}
 //#define ANIMATE_IOR
 //#define MOUSE_IOR
 //#define ORBIT_CAM
-#define SS 2
+#define SS 4
 #define COLOR_T 1
 //#define BRDF_EMISSIVE
 #define BRDF_PHONG
@@ -605,9 +605,9 @@ layout(location=1) uniform ivec2 ires;
 
 
 
-const float TRANSMITTANCE= .92;//this affects lumianance spatial freqenz of result; .84 is especially magical
-const float EXPOSURE= .40;
-const float GAMMA=  .91;
+const float TRANSMITTANCE= .94;//this affects lumianance spatial freqenz of result; .84 is especially magical
+const float EXPOSURE= .33;
+const float GAMMA=  1.3;
 
 //PERF SETTINGS
 const int   MIN_I= 1<<5;//distance
@@ -623,7 +623,7 @@ const vec3 COLOR_B = vec3( 0.0,1.0 , 0.0);
 const vec3 COLOR_C = vec3( 0.3,1.8,  0.8);
 const vec3 COLOR_A = vec3( 1.1,0.4 , 1.5);
 
-const float IOR= 1.7;//high abs ior will cause rapid extinction
+const float IOR= -1.05;//high abs ior will cause rapid extinction
 
 
 
@@ -639,10 +639,22 @@ vec3 img(vec2 uv){
     uvn.x*= asp;
     
 
-    vec3 ra= vec3( uvn*2.5, -1.);
-    vec3 rc= vec3( uvn*8.,-2. );
-    rc.xy+= .5;
+    vec3 ra= vec3( uvn*3., -1.);
+    vec3 rc= vec3( uvn*8., .0 );
+    //rc.z= .4*len(rc.xy);
+    rc.y+=7.25;
     //rc.xy+= 1.5;
+
+    ra.y*=-1;
+    rc.y*=-1;
+
+    mat2 rm= rot2d(TAU/8.);
+    ra.yz*= rm;
+    rc.yz*= rm;
+    //rc.xz*= rm;
+    //ra.xz*= rm;
+    rc.x+=-.5;
+
     
     float ior= IOR;
     float iorrcp= 1./ior;
@@ -674,8 +686,7 @@ vec3 img(vec2 uv){
 		float dt= minv(edt);//time to soonest edge
         ass(dt>=0.,ORANGE);//assert no negative time
         
-        dp= v*(dt+ETA*8.);//if very precisely into an edge, may diagonal leap, dependent on eta
-        //*8 because ?????
+        dp= v*(dt+ETA*4.);//if very precisely into an edge, may diagonal leap, dependent on eta
         p+= dp;
         n= ef-floor(p);
         ass(len(n)>0., GREEN);
@@ -730,38 +741,39 @@ vec3 img(vec2 uv){
                     float l= minv(1.-abs(r));
                     //float l= sum(1.-abs(r));
                     //float l= 1.-abs(r.y);
-                    l= cos(l*PI*1.8)*1.;
+                    l= cos(l*PI*2.8)*1.;
                     //l= pow(l,1.25)*1.4;
                     //l= nmapu(cos(l*100000.));
                     //l= pow(l,.50)*.95;
                     //l= pow(l,.20)*.65;
+                    l=nmapu(l);
+                    l= pow(l,2.);
                     vec3 c= vec3(l);
                 #endif
                 #ifdef BRDF_BOUNCE
                     vec3 _c[]= vec3[](
 
-						vec3( 0.0, .98 , 0.0),
-						vec3(  .45, 0.  , .7),
-						vec3( 0.0,  .125,  .98),
-						-WHITE*.125
-                    	//GREEN-RED,
-                    	//BLUE,
-                    	//CYAN*3,
-                    	//MAGENTA,
-                    	//ORANGE,
-                    	//WHITE*-.5
-
-						//vec3(-0.50,01.00,01.00),
-						//vec3( 1.00, 0.00, 0.00),
-						//vec3(-0.10, 0.20,00.20),
-						//vec3( 0.00, 1.00,00.50),
-						//vec3( 0.00, 0.80, 0.00),
-						//vec3( 0.00, 0.54, 0.50),
+						vec3( 0.0, .95 , 0.0),
+						vec3(  .9, 0.  , .7),
+						vec3( 0.0,  .125,  .94),
+						-WHITE*.25
                     );
                     c*= _c[b/1%4];
-                    c.r+= float(b>44)*6.;
-                    c.b+= float(b<2)*18.;
                 #endif
+
+                //c.r+= float(b>)*64.;
+
+                if(v.z>0)
+                	c+= BLUE*v.z*.32;
+                else
+                	c+= GREEN*-v.z*.14;
+
+                if(p.y<-44)
+                	c+= c*-.4 + vec3(5.55,.85,0.);
+
+                if(p.z>17)
+                	c+= WHITE*.01*length(p);
+
                 a+= c*cmag;
                 cmag*= TRANSMITTANCE;
                 b++;
@@ -771,6 +783,10 @@ vec3 img(vec2 uv){
 		ass(real(v), YELLOW);
 		ass(real(n), MAGENTA);
     }
+
+    if(uvn.x>0)
+    	a=lerp(a,(norm(a)-.2)*9.,.5);
+
     float cnorm= 1.;///(1.-pow(1.-TRANSMITTANCE,float(maxb)));
     //luminance normalization is empirical
     //meaning i have no fucking clue how it works
@@ -816,6 +832,7 @@ void main(){
         col= vec4(_err,1.);
     #endif
     
+
     //tonemap
     col*=EXPOSURE;
     col*= 1.-1./(1.+maxv(col));
