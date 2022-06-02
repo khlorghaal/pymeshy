@@ -10,8 +10,9 @@ try:
 	rast= img.raster.flatten()
 	assert(len(rast)==w*h*4)
 except:
-	w= 2560
-	h= 1440
+	w= 2560#*2//3
+	h= 1440#*2//3
+	#w,h= (9075,6201)
 	rast= np.zeros(w*h*4)
 
 import pygame
@@ -54,11 +55,12 @@ def prog(m):
 		print(e)
 		exit()
 
-progs= list(map(prog,[
-	['STAGE_GEOMAG'],
-	*([['STAGE_FLARE']]*5),
-	['STAGE_TONEMAP']
-	]))
+#progs= list(map(prog,[
+#	['STAGE_GEOMAG'],
+#	*([['STAGE_FLARE']]*5),
+#	['STAGE_TONEMAP']
+#	]))
+progs= [prog(['FORWARD'])]
 
 textures= glGenTextures(3)
 _pingpong= textures[:2]
@@ -104,25 +106,28 @@ glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
 
 del rast
-rast= glReadPixels(0,0,w,h, GL_RGBA,GL_FLOAT)
+rast= glReadPixels(0,0,w,h, GL_RGB,GL_FLOAT)
 
 pygame.display.flip()
 
 print(rast.shape)
-rast= rast*(-1+2**16)
-rast= rast.astype(np.uint16).flatten()
+rast= rast*(-1+2**8)
+rast= rast.astype(np.uint8).flatten()
 print(rast.shape)
-w= png.Writer(
+img= png.Writer(
 	size=(w,h),
 	bitdepth=8,
 	greyscale=False,
-	alpha= True,
-	compression=8
+	alpha= False,
+	compression=9
 	)
 
-#w.write_array( open('./out.png','wb'), rast )
+img.write_array( open('./out.png','wb'), rast )
+
+import time
 
 while(1):
 	for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.KEYDOWN and event.key==pygame.K_SPACE:
                 exit()
+	time.sleep(.250)
