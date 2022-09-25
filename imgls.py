@@ -10,8 +10,8 @@ try:
 	rast= img.raster.flatten()
 	assert(len(rast)==w*h*4)
 except:
-	w= 2560#*2//3
-	h= 1440#*2//3
+	w= 2560*2//3
+	h= 1440*2//3
 	#w,h= (9075,6201)
 	rast= np.zeros(w*h*4)
 
@@ -74,36 +74,44 @@ for i,pp in enumerate(textures):
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4)
 
 
-wg= (w//8,h//8,1)
-for p in progs:
-	(p,args)= p
-	glUseProgram(p)
-	glUniform2f(0,w,h)
-	glUniform2i(1,w,h)
+T= 32;
+wg= ( w//(8*T)+1, h//(8*T)+1, 1)
+
+for ty in range(T):
+	for tx in range(T):
+
+		for p in progs:
+			(p,args)= p
+			glUseProgram(p)
+			glUniform2f(0,w,h)
+			glUniform2i(1,w,h)
+			glUniform2i(2,tx*w//T,ty*h//T)
+			glUniform1i(3,2)
 
 
-	if 'STAGE_GEOMAG' in args:
-		glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
-	else:
-		_pingpong= _pingpong[::-1]
+			if 'STAGE_GEOMAG' in args:
+				glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
+			else:
+				#_pingpong= _pingpong[::-1]
 
-		glActiveTexture(GL_TEXTURE0+0)
-		glBindTexture(GL_TEXTURE_2D,_pingpong[0])
-		glGenerateMipmap(GL_TEXTURE_2D)
+				#glActiveTexture(GL_TEXTURE0+0)
+				#glBindTexture(GL_TEXTURE_2D,_pingpong[0])
+				#glGenerateMipmap(GL_TEXTURE_2D)
 
-		glActiveTexture(GL_TEXTURE0+1)
-		glBindTexture(GL_TEXTURE_2D,tex_basis)
+				#glActiveTexture(GL_TEXTURE0+1)
+				#glBindTexture(GL_TEXTURE_2D,tex_basis)
 
-		glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
+				glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
 
-	glDispatchCompute(*wg)
-	glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
+			glDispatchCompute(*wg)
+			glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
 
-fb= glGenFramebuffers(1)
-glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
-glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
-glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,_pingpong[1], 0)
-glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
+		fb= glGenFramebuffers(1)
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,_pingpong[1], 0)
+		glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
+		pygame.display.flip()
 
 del rast
 rast= glReadPixels(0,0,w,h, GL_RGB,GL_FLOAT)

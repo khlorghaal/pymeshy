@@ -591,7 +591,6 @@ int cbrti(int x){return int( pow(float(x),1./3.));}
 //#define ANIMATE_IOR
 //#define MOUSE_IOR
 //#define ORBIT_CAM
-#define SS 4
 #define COLOR_T 1
 //#define BRDF_EMISSIVE
 #define BRDF_PHONG
@@ -600,6 +599,8 @@ int cbrti(int x){return int( pow(float(x),1./3.));}
 
 layout(location=0) uniform  vec2  res;
 layout(location=1) uniform ivec2 ires;
+layout(location=2) uniform ivec2 iuv_offs;
+layout(location=3) uniform int ss;
 
 //const float time= 1.;
 
@@ -642,7 +643,7 @@ vec3 img(vec2 uv){
     vec3 ra= vec3( uvn*3., -1.);
     vec3 rc= vec3( uvn*8., .0 );
     //rc.z= .4*len(rc.xy);
-    rc.y+=7.25;
+    rc.y+=6.;
     //rc.xy+= 1.5;
 
     ra.y*=-1;
@@ -813,20 +814,21 @@ layout(
 
 void main(){
 	ivec2 iuv= ivec2(gl_GlobalInvocationID.xy);
+	iuv+= iuv_offs;
 	 vec2  uv= (vec2(iuv))/res;
 
 	vec4 col= vec4(0);
 
-    #if SS
-        for(int x=0; x<SS; x++){
-            for(int y=0; y<SS; y++){
-                col+=vec4(img( uv + vec2(x,y)/((SS+1)*res)  ),1.);
+    if(ss>1){
+        for(int x=0; x<ss; x++){
+            for(int y=0; y<ss; y++){
+                col+=vec4(img( uv + vec2(x,y)/((ss+1)*res)  ),1.);
             }
         }
-        col/= float(SS*SS);
-    #else
+        col/= float(ss*ss);
+    }else{
         col=vec4(img(uv),1.);
-    #endif
+    }
     
     #ifdef DEBUG
         col= vec4(_err,1.);
