@@ -1,6 +1,10 @@
 import numpy as np
 import png
 #import exr
+from time import *
+
+ANIM= 1
+time= 0.
 
 img= None
 try:
@@ -10,13 +14,18 @@ try:
 	rast= img.raster.flatten()
 	assert(len(rast)==w*h*4)
 except:
-	w= 2560*2//3
-	h= 1440*2//3
+	w= 2560*1//3
+	h= 1440*1//2
 	#w,h= (9075,6201)
 	rast= np.zeros(w*h*4)
 
 import pygame
 from pygame.locals import *
+
+def chexit():#check exit status
+	for event in pygame.event.get():
+			if event.type == pygame.KEYDOWN and event.key==pygame.K_SPACE:
+				exit()
 
 import ctypes as ct
 from OpenGL.GL import *
@@ -28,39 +37,42 @@ resolution= (w,h)
 pygame.display.set_mode(resolution, DOUBLEBUF | OPENGL)
 pygame.display.set_caption('____________________________')
 
-with open("imgls.comp.glsl") as f:
-	csh_src= f.read()
-def prog(m):
-	try:
-		csh_src_p= ''.join([
-			'#version 450\n',
-			*['#define %s 1\n'%d for d in m],
-			'#line 1\n',
-			csh_src
-		])
-		csh_sh= shaders.compileShader(csh_src_p, GL_COMPUTE_SHADER)
-		return (shaders.compileProgram(csh_sh),m)
-	except Exception as e:
-		print('\nSHADERROR\n')
-		e= str(e)
-		e= e.replace('\\\\n','\n')
-		e= e.replace(  '\\n','\n')
-		e= e.replace(  '\\t','\t')
-		e= e.replace(  '\\t','\t')
-		e= e.replace(  '\\','')
-		e= e.replace('\\\\','')#fuck
-		import re
-		e= re.sub(r'\(([0-9]+)\)', r'\nFile "imgls.comp.glsl", line \1', e)
-		#sublime default error regex
-		print(e)
-		exit()
+progs= []
+def loadprogs():
+	with open("imgls.comp.glsl") as f:
+		csh_src= f.read()
+	def prog(m):
+		try:
+			csh_src_p= ''.join([
+				'#version 450\n',
+				*['#define %s 1\n'%d for d in m],
+				'#line 1\n',
+				csh_src
+			])
+			csh_sh= shaders.compileShader(csh_src_p, GL_COMPUTE_SHADER)
+			return (shaders.compileProgram(csh_sh),m)
+		except Exception as e:
+			print('\nSHADERROR\n')
+			e= str(e)
+			e= e.replace('\\\\n','\n')
+			e= e.replace(  '\\n','\n')
+			e= e.replace(  '\\t','\t')
+			e= e.replace(  '\\t','\t')
+			e= e.replace(  '\\','')
+			e= e.replace('\\\\','')#fuck
+			import re
+			e= re.sub(r'\(([0-9]+)\)', r'\nFile "imgls.comp.glsl", line \1', e)
+			#sublime default error regex
+			print(e)
+			exit()
 
-#progs= list(map(prog,[
-#	['STAGE_GEOMAG'],
-#	*([['STAGE_FLARE']]*5),
-#	['STAGE_TONEMAP']
-#	]))
-progs= [prog(['FORWARD'])]
+	#progs= list(map(prog,[
+	#	['STAGE_GEOMAG'],
+	#	*([['STAGE_FLARE']]*5),
+	#	['STAGE_TONEMAP']
+	#	]))
+	global progs
+	progs= [prog(['FORWARD'])]
 
 textures= glGenTextures(3)
 _pingpong= textures[:2]
@@ -74,68 +86,92 @@ for i,pp in enumerate(textures):
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4)
 
 
-T= 32;
-wg= ( w//(8*T)+1, h//(8*T)+1, 1)
+T= 8;#number of tile divisions
+LS= 4;#kernel local_size
+wg= ( w//(LS*T)+1, h//(LS*T)+1, 1)
 
-for ty in range(T):
-	for tx in range(T):
+SS= 4 #supersample width
 
-		for p in progs:
-			(p,args)= p
-			glUseProgram(p)
-			glUniform2f(0,w,h)
-			glUniform2i(1,w,h)
-			glUniform2i(2,tx*w//T,ty*h//T)
-			glUniform1i(3,2)
+profile_start= perf_counter()
 
+def render():
+	loadprogs()#recompile every frame lmao
+	for ty in range(T):
+		for tx in range(T):
 
-			if 'STAGE_GEOMAG' in args:
-				glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
-			else:
-				#_pingpong= _pingpong[::-1]
+			for p in progs:
+				(p,args)= p
+				glUseProgram(p)
+				glUniform2f(0,w,h)
+				glUniform2i(1,w,h)
+				glUniform2i(2,tx*w//T,ty*h//T)
+				glUniform1i(3, SS)
+				glUniform1f(4, time)
+				if ANIM:
+					glUniform1i(5,1<<11)
+					glUniform1i(6,12)
+				else:
+					glUniform1i(5,1<<64)
+					glUniform1i(6,24)
 
-				#glActiveTexture(GL_TEXTURE0+0)
-				#glBindTexture(GL_TEXTURE_2D,_pingpong[0])
-				#glGenerateMipmap(GL_TEXTURE_2D)
+				if 'STAGE_GEOMAG' in args:
+					glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
+				else:
+					#_pingpong= _pingpong[::-1]
 
-				#glActiveTexture(GL_TEXTURE0+1)
-				#glBindTexture(GL_TEXTURE_2D,tex_basis)
+					#glActiveTexture(GL_TEXTURE0+0)
+					#glBindTexture(GL_TEXTURE_2D,_pingpong[0])
+					#glGenerateMipmap(GL_TEXTURE_2D)
 
-				glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
+					#glActiveTexture(GL_TEXTURE0+1)
+					#glBindTexture(GL_TEXTURE_2D,tex_basis)
 
-			glDispatchCompute(*wg)
-			glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
+					glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
 
-		fb= glGenFramebuffers(1)
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,_pingpong[1], 0)
-		glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
-		pygame.display.flip()
+				glDispatchCompute(*wg)
+				glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
+
+			fb= glGenFramebuffers(1)
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, fb)
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,_pingpong[1], 0)
+			glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
+			pygame.display.flip()
+			chexit()
+
+if ANIM:
+	SS= 1
+	while 1:
+		render()
+		time+=1
+		chexit()
+else:
+	render()
 
 del rast
 rast= glReadPixels(0,0,w,h, GL_RGB,GL_FLOAT)
 
 pygame.display.flip()
 
+print('render time %sms'%((perf_counter()-profile_start)*1000))
+
+profile_start= perf_counter()
+
 print(rast.shape)
 rast= rast*(-1+2**8)
 rast= rast.astype(np.uint8).flatten()
-print(rast.shape)
 img= png.Writer(
 	size=(w,h),
 	bitdepth=8,
 	greyscale=False,
 	alpha= False,
-	compression=9
+	compression=5
 	)
 
 img.write_array( open('./out.png','wb'), rast )
 
-import time
+print('save time %sms'%((perf_counter()-profile_start)*1000))
 
 while(1):
-	for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN and event.key==pygame.K_SPACE:
-                exit()
-	time.sleep(.250)
+	chexit()
+	sleep(.250)

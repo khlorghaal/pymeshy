@@ -591,40 +591,41 @@ int cbrti(int x){return int( pow(float(x),1./3.));}
 //#define ANIMATE_IOR
 //#define MOUSE_IOR
 //#define ORBIT_CAM
-#define COLOR_T 1
-//#define BRDF_EMISSIVE
+
+//these are mutex
+//#define BRDF_EMISSIVE_0
+//#define BRDF_EMISSIVE_1
 #define BRDF_PHONG
-#define BRDF_BOUNCE
+//#define BRDF_BOUNCE
 
 
 layout(location=0) uniform  vec2  res;
 layout(location=1) uniform ivec2 ires;
 layout(location=2) uniform ivec2 iuv_offs;
 layout(location=3) uniform int ss;
+layout(location=4) uniform float time;
+layout(location=5) uniform int MAX_I;//distance
+layout(location=6) uniform int MAX_BOUNCE;//reflections
+
 
 //const float time= 1.;
 
 
 
-const float TRANSMITTANCE= .94;//this affects lumianance spatial freqenz of result; .84 is especially magical
-const float EXPOSURE= .33;
-const float GAMMA=  1.3;
+const float TRANSMITTANCE= .8;//this affects lumianance spatial freqenz of result; .84 is especially magical
+const float EXPOSURE= .24;
+const float GAMMA=  1.28;
 
 //PERF SETTINGS
-const int   MIN_I= 1<<5;//distance
-const int   MAX_I= 1<<12;
-const int   MIN_BOUNCE= 4;//reflections
-const int   MAX_BOUNCE= 64;
 //
-const vec4  FOGCOLOR= vec4(.2,.65,.99, 2.);
-const float FAST= .2;
+const vec4  FOGCOLOR= vec4(.2,.65,.99, 1.);
 
 
-const vec3 COLOR_B = vec3( 0.0,1.0 , 0.0);
-const vec3 COLOR_C = vec3( 0.3,1.8,  0.8);
-const vec3 COLOR_A = vec3( 1.1,0.4 , 1.5);
+const vec3 COLOR_B = vec3( 1.0,0.0,0.0);
+const vec3 COLOR_C = vec3( 0.0,1.0,0.0);
+const vec3 COLOR_A = vec3( 0.0,0.0,1.0);
 
-const float IOR= -1.05;//high abs ior will cause rapid extinction
+const float IOR= .05;//high abs ior will cause rapid extinction
 
 
 
@@ -640,21 +641,15 @@ vec3 img(vec2 uv){
     uvn.x*= asp;
     
 
-    vec3 ra= vec3( uvn*3., -1.);
-    vec3 rc= vec3( uvn*8., .0 );
-    //rc.z= .4*len(rc.xy);
-    rc.y+=6.;
-    //rc.xy+= 1.5;
+    vec3 ra= vec3( uvn, -1.);
+    vec3 rc= vec3( uvn, .0 );
 
-    ra.y*=-1;
-    rc.y*=-1;
+    _FOV= .35;
+    ray r= look_persp_orbit(uvn, vec2((5.+time*.01)/8.,1./8.)*TAU, .5);
+    ra= r.a;
+    rc= r.c;
 
-    mat2 rm= rot2d(TAU/8.);
-    ra.yz*= rm;
-    rc.yz*= rm;
-    //rc.xz*= rm;
-    //ra.xz*= rm;
-    rc.x+=-.5;
+    rc+=-.5;
 
     
     float ior= IOR;
@@ -669,9 +664,8 @@ vec3 img(vec2 uv){
 	float cmag= 1.;
 	bool s= stagger(p);
     int i=0;
-    float lod= 1.;
-    int maxi= int(lerp(float(MIN_I),     float(MAX_I),      lod));
-    int maxb=  int(lerp(float(MIN_BOUNCE),float(MAX_BOUNCE), lod));
+    int maxi= MAX_I;
+    int maxb= MAX_BOUNCE;
     for(; i<maxi; i++){
 		if(b>maxb)
 			break;//worth the warp divergence
@@ -718,25 +712,32 @@ vec3 img(vec2 uv){
 			v= norm(r);
             if(s){//hit
                 //brdf
-                #ifdef BRDF_EMISSIVE
-                    #if COLOR_T==0
-                        vec3 C= nmapu(n);
-                        vec3 c= 
-                              C.x*COLOR_A
-                            + C.y*COLOR_B
-                            + C.z*COLOR_C;
-                    #else
-                        vec3 CP= sat( n);
-                        vec3 CN= sat(-n);
-                        vec3 c= 
-                              CP.x*COLOR_XP
-                            + CP.y*COLOR_YP
-                            + CP.z*COLOR_ZP
-                            + CN.x*COLOR_XN
-                            + CN.y*COLOR_YN
-                            + CN.z*COLOR_ZN;
-                    #endif
+
+                #ifdef BRDF_EMISSIVE_0
+                    vec3 C= abs(n);
+                    vec3 c= 
+                          C.x*COLOR_A
+                        + C.y*COLOR_B
+                        + C.z*COLOR_C;
                 #endif
+				#ifdef BRDF_EMISSIVE_1
+					const vec3 COLOR_XP = vec3( 1.,0.,0.);
+					const vec3 COLOR_YP = vec3( 0.,1.,0.);
+					const vec3 COLOR_ZP = vec3( 0.,0.,1.);
+					const vec3 COLOR_XN = vec3( 1.,1.,0.);
+					const vec3 COLOR_YN = vec3( 0.,1.,1.);
+					const vec3 COLOR_ZN = vec3( 1.,0.,1.);
+                    vec3 CP= sat( n);
+                    vec3 CN= sat(-n);
+                    vec3 c= 
+                          CP.x*COLOR_XP
+                        + CP.y*COLOR_YP
+                        + CP.z*COLOR_ZP
+                        + CN.x*COLOR_XN
+                        + CN.y*COLOR_YN
+                        + CN.z*COLOR_ZN;
+                #endif
+
                 #ifdef BRDF_PHONG
                     //tell the rendering equation to fuckoff
                     float l= minv(1.-abs(r));
@@ -751,6 +752,7 @@ vec3 img(vec2 uv){
                     l= pow(l,2.);
                     vec3 c= vec3(l);
                 #endif
+
                 #ifdef BRDF_BOUNCE
                     vec3 _c[]= vec3[](
 
@@ -807,8 +809,8 @@ vec3 img(vec2 uv){
 layout(binding=0, rgba32f) writeonly restrict uniform image2D img_o;
 
 layout(
-	local_size_x= 8,
-	local_size_y= 8,
+	local_size_x= 4,
+	local_size_y= 4,
 	local_size_z= 1
 	) in;
 
@@ -837,7 +839,10 @@ void main(){
 
     //tonemap
     col*=EXPOSURE;
-    col*= 1.-1./(1.+maxv(col));
+    col*= 1.-1./(1.+lum(col.rgb));//rheinhard
+ 	//col = vec4(1)- 1./(vec4(1) + 1.50*pow(col, vec4(1.25)));//parnell
+ 	//col = vec4(1)- 1./(exp(col)+1);
+
     col= pow(col,vec4(GAMMA));
     col.a= 1.;
 
