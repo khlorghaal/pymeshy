@@ -593,9 +593,9 @@ int cbrti(int x){return int( pow(float(x),1./3.));}
 //#define ORBIT_CAM
 
 //these are mutex
-//#define BRDF_EMISSIVE_0
+#define BRDF_EMISSIVE_0
 //#define BRDF_EMISSIVE_1
-#define BRDF_PHONG
+//#define BRDF_PHONG
 //#define BRDF_BOUNCE
 
 
@@ -612,20 +612,16 @@ layout(location=6) uniform int MAX_BOUNCE;//reflections
 
 
 
-const float TRANSMITTANCE= .8;//this affects lumianance spatial freqenz of result; .84 is especially magical
-const float EXPOSURE= .24;
-const float GAMMA=  1.28;
-
-//PERF SETTINGS
-//
-const vec4  FOGCOLOR= vec4(.2,.65,.99, 1.);
+const float TRANSMITTANCE= .81;//this affects lumianance spatial freqenz of result; .84 is especially magical
+const float EXPOSURE= .55;
+const float GAMMA=  2.1;
 
 
-const vec3 COLOR_B = vec3( 1.0,0.0,0.0);
-const vec3 COLOR_C = vec3( 0.0,1.0,0.0);
-const vec3 COLOR_A = vec3( 0.0,0.0,1.0);
+const vec3 COLOR_B = vec3(  .1,0.0,0.0);
+const vec3 COLOR_C = vec3( 1.0,0.0,0.0);
+const vec3 COLOR_A = vec3( 1.0,0.0,0.0);
 
-const float IOR= .05;//high abs ior will cause rapid extinction
+const float IOR= .95;//high abs ior will cause rapid extinction
 
 
 
@@ -645,14 +641,21 @@ vec3 img(vec2 uv){
     vec3 rc= vec3( uvn, .0 );
 
     _FOV= .35;
-    ray r= look_persp_orbit(uvn, vec2((5.+time*.01)/8.,1./8.)*TAU, .5);
+    ray r= look_persp_orbit(uvn,
+    	vec2((1.+time*.0  )/8.,
+    		 //(1.+time*.03)/8. )*TAU,
+    		 (-.999+time*.0)/8. )*TAU,
+    	.5);
     ra= r.a;
-    rc= r.c;
+    rc= r.c*1.;
 
-    rc+=-.5;
+    rc-=1.5;//center
 
     
-    float ior= IOR;
+    float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
+    //float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
+    ior= 1.+.02;
+
     float iorrcp= 1./ior;
     
 	vec3 p= rc;//position+near
@@ -722,11 +725,11 @@ vec3 img(vec2 uv){
                 #endif
 				#ifdef BRDF_EMISSIVE_1
 					const vec3 COLOR_XP = vec3( 1.,0.,0.);
-					const vec3 COLOR_YP = vec3( 0.,1.,0.);
-					const vec3 COLOR_ZP = vec3( 0.,0.,1.);
-					const vec3 COLOR_XN = vec3( 1.,1.,0.);
-					const vec3 COLOR_YN = vec3( 0.,1.,1.);
-					const vec3 COLOR_ZN = vec3( 1.,0.,1.);
+					const vec3 COLOR_YP = vec3( 1.,1.,0.);
+					const vec3 COLOR_ZP = vec3( 1.,1.,0.);
+					const vec3 COLOR_XN = vec3( 1.,0.,0.);
+					const vec3 COLOR_YN = vec3( 1.,1.,0.);
+					const vec3 COLOR_ZN = vec3( 1.,0.,0.);
                     vec3 CP= sat( n);
                     vec3 CN= sat(-n);
                     vec3 c= 
@@ -743,7 +746,7 @@ vec3 img(vec2 uv){
                     float l= minv(1.-abs(r));
                     //float l= sum(1.-abs(r));
                     //float l= 1.-abs(r.y);
-                    l= cos(l*PI*2.8)*1.;
+                    l= cos(l*PI*.8)*1.;
                     //l= pow(l,1.25)*1.4;
                     //l= nmapu(cos(l*100000.));
                     //l= pow(l,.50)*.95;
@@ -766,17 +769,6 @@ vec3 img(vec2 uv){
 
                 //c.r+= float(b>)*64.;
 
-                if(v.z>0)
-                	c+= BLUE*v.z*.32;
-                else
-                	c+= GREEN*-v.z*.14;
-
-                if(p.y<-44)
-                	c+= c*-.4 + vec3(5.55,.85,0.);
-
-                if(p.z>17)
-                	c+= WHITE*.01*length(p);
-
                 a+= c*cmag;
                 cmag*= TRANSMITTANCE;
                 b++;
@@ -787,8 +779,8 @@ vec3 img(vec2 uv){
 		ass(real(n), MAGENTA);
     }
 
-    if(uvn.x>0)
-    	a=lerp(a,(norm(a)-.2)*9.,.5);
+    //if(uvn.x>0)
+    //	a=lerp(a,(norm(a)-.2)*9.,.5);
 
     float cnorm= 1.;///(1.-pow(1.-TRANSMITTANCE,float(maxb)));
     //luminance normalization is empirical
@@ -840,7 +832,7 @@ void main(){
     //tonemap
     col*=EXPOSURE;
     col*= 1.-1./(1.+lum(col.rgb));//rheinhard
- 	//col = vec4(1)- 1./(vec4(1) + 1.50*pow(col, vec4(1.25)));//parnell
+ 	//col = vec4(1)- 1./(vec4(1) + pows(col,2.));//parnell
  	//col = vec4(1)- 1./(exp(col)+1);
 
     col= pow(col,vec4(GAMMA));

@@ -3,8 +3,8 @@ import png
 #import exr
 from time import *
 
-ANIM= 1
-time= 0.
+ANIM= 0
+time= 0
 
 img= None
 try:
@@ -14,8 +14,8 @@ try:
 	rast= img.raster.flatten()
 	assert(len(rast)==w*h*4)
 except:
-	w= 2560*1//3
-	h= 1440*1//2
+	w= 2560
+	h= 1440
 	#w,h= (9075,6201)
 	rast= np.zeros(w*h*4)
 
@@ -86,11 +86,11 @@ for i,pp in enumerate(textures):
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4)
 
 
-T= 8;#number of tile divisions
+T= 4 if ANIM else 32;#number of tile divisions
 LS= 4;#kernel local_size
 wg= ( w//(LS*T)+1, h//(LS*T)+1, 1)
 
-SS= 4 #supersample width
+SS= 8 #supersample width
 
 profile_start= perf_counter()
 
@@ -105,14 +105,15 @@ def render():
 				glUniform2f(0,w,h)
 				glUniform2i(1,w,h)
 				glUniform2i(2,tx*w//T,ty*h//T)
-				glUniform1i(3, SS)
 				glUniform1f(4, time)
 				if ANIM:
-					glUniform1i(5,1<<11)
-					glUniform1i(6,12)
+					glUniform1i(3, 1)#SS
+					glUniform1i(5,1<<10)#dist
+					glUniform1i(6,11)#bounces
 				else:
-					glUniform1i(5,1<<64)
-					glUniform1i(6,24)
+					glUniform1i(3, SS)
+					glUniform1i(5,1<<17)
+					glUniform1i(6,28)
 
 				if 'STAGE_GEOMAG' in args:
 					glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
@@ -137,13 +138,14 @@ def render():
 			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,_pingpong[1], 0)
 			glBlitFramebuffer(0,0,w,h,0,0,w,h,GL_COLOR_BUFFER_BIT, GL_NEAREST)
 			pygame.display.flip()
+			sleep(1./120)
 			chexit()
 
 if ANIM:
-	SS= 1
 	while 1:
 		render()
 		time+=1
+		sleep(1./35)
 		chexit()
 else:
 	render()
@@ -158,14 +160,14 @@ print('render time %sms'%((perf_counter()-profile_start)*1000))
 profile_start= perf_counter()
 
 print(rast.shape)
-rast= rast*(-1+2**8)
-rast= rast.astype(np.uint8).flatten()
+rast= rast*(-1+2**16)
+rast= rast.astype(np.uint16).flatten()
 img= png.Writer(
 	size=(w,h),
-	bitdepth=8,
+	bitdepth=16,
 	greyscale=False,
 	alpha= False,
-	compression=5
+	compression=4
 	)
 
 img.write_array( open('./out.png','wb'), rast )
