@@ -13,7 +13,7 @@
 #define SQRT3 (sqrt(3.))
 #define BIG 1e8
 #define SMALL 1e-8
-#define ETA 1e-4
+#define ETA .5e-3
 #define eqf(a,b) ( abs((a)-(b))<ETA )
 
 //Aliases
@@ -613,13 +613,13 @@ layout(location=6) uniform int MAX_BOUNCE;//reflections
 
 
 const float TRANSMITTANCE= .81;//this affects lumianance spatial freqenz of result; .84 is especially magical
-const float EXPOSURE= .55;
-const float GAMMA=  2.1;
+const float EXPOSURE= 1.9;
+const float GAMMA=  .65;
 
 
-const vec3 COLOR_B = vec3(  .1,0.0,0.0);
-const vec3 COLOR_C = vec3( 1.0,0.0,0.0);
-const vec3 COLOR_A = vec3( 1.0,0.0,0.0);
+const vec3 COLOR_A = vec3( .6,0.0,0.10);
+const vec3 COLOR_B = vec3( -0.0,.30,0.05);
+const vec3 COLOR_C = vec3( -0.0,0.0,1.);
 
 const float IOR= .95;//high abs ior will cause rapid extinction
 
@@ -640,21 +640,21 @@ vec3 img(vec2 uv){
     vec3 ra= vec3( uvn, -1.);
     vec3 rc= vec3( uvn, .0 );
 
-    _FOV= .35;
+    _FOV= .65;
     ray r= look_persp_orbit(uvn,
-    	vec2((1.+time*.0  )/8.,
+    	vec2((3.+time*.00  )/8.,
     		 //(1.+time*.03)/8. )*TAU,
-    		 (-.999+time*.0)/8. )*TAU,
-    	.5);
+    		 (1.+time*.0   )/8.)*TAU,
+    	2.5);
     ra= r.a;
     rc= r.c*1.;
 
-    rc-=1.5;//center
+    rc+=.5;//center
 
     
-    float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
+    float ior= IOR + sin(time*.32)*sin(time*.18)*1.98;
     //float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
-    ior= 1.+.02;
+    ior= 1-.6;
 
     float iorrcp= 1./ior;
     
@@ -716,56 +716,26 @@ vec3 img(vec2 uv){
             if(s){//hit
                 //brdf
 
-                #ifdef BRDF_EMISSIVE_0
-                    vec3 C= abs(n);
-                    vec3 c= 
-                          C.x*COLOR_A
-                        + C.y*COLOR_B
-                        + C.z*COLOR_C;
-                #endif
-				#ifdef BRDF_EMISSIVE_1
-					const vec3 COLOR_XP = vec3( 1.,0.,0.);
-					const vec3 COLOR_YP = vec3( 1.,1.,0.);
-					const vec3 COLOR_ZP = vec3( 1.,1.,0.);
-					const vec3 COLOR_XN = vec3( 1.,0.,0.);
-					const vec3 COLOR_YN = vec3( 1.,1.,0.);
-					const vec3 COLOR_ZN = vec3( 1.,0.,0.);
-                    vec3 CP= sat( n);
-                    vec3 CN= sat(-n);
-                    vec3 c= 
-                          CP.x*COLOR_XP
-                        + CP.y*COLOR_YP
-                        + CP.z*COLOR_ZP
-                        + CN.x*COLOR_XN
-                        + CN.y*COLOR_YN
-                        + CN.z*COLOR_ZN;
-                #endif
 
-                #ifdef BRDF_PHONG
-                    //tell the rendering equation to fuckoff
-                    float l= minv(1.-abs(r));
-                    //float l= sum(1.-abs(r));
-                    //float l= 1.-abs(r.y);
-                    l= cos(l*PI*.8)*1.;
-                    //l= pow(l,1.25)*1.4;
-                    //l= nmapu(cos(l*100000.));
-                    //l= pow(l,.50)*.95;
-                    //l= pow(l,.20)*.65;
-                    l=nmapu(l);
-                    l= pow(l,2.);
-                    vec3 c= vec3(l);
-                #endif
+                vec3 C= abs(n);
+                vec3 c= 
+                      C.x*COLOR_A
+                    + C.y*COLOR_B
+                    + C.z*COLOR_C;
+                const float h= .9;
+                float l= sat(maxv(1.-abs(dp))-h)/(1.-h);
+                c*= l;
 
-                #ifdef BRDF_BOUNCE
-                    vec3 _c[]= vec3[](
+                /*
+                vec3 _c[]= vec3[](
 
-						vec3( 0.0, .95 , 0.0),
-						vec3(  .9, 0.  , .7),
-						vec3( 0.0,  .125,  .94),
-						-WHITE*.25
-                    );
-                    c*= _c[b/1%4];
-                #endif
+					vec3( 0.0, .95 , 0.0),
+					vec3(  .9, 0.  , .7),
+					vec3( 0.0,  .125,  .94),
+					-WHITE*.25
+                );
+                c*= _c[b/1%4];
+                */
 
                 //c.r+= float(b>)*64.;
 
@@ -797,12 +767,11 @@ vec3 img(vec2 uv){
 
 
 
-
-layout(binding=0, rgba32f) writeonly restrict uniform image2D img_o;
+layout(binding=0, rgba16f) writeonly restrict uniform image2D img_o;
 
 layout(
-	local_size_x= 4,
-	local_size_y= 4,
+	local_size_x= 8,
+	local_size_y= 8,
 	local_size_z= 1
 	) in;
 
@@ -816,7 +785,9 @@ void main(){
     if(ss>1){
         for(int x=0; x<ss; x++){
             for(int y=0; y<ss; y++){
-                col+=vec4(img( uv + vec2(x,y)/((ss+1)*res)  ),1.);
+            	vec4 c= vec4(img( uv + vec2(x,y)/((ss+1)*res)  ),1.);
+            	if(real(c))
+                	col+=c;
             }
         }
         col/= float(ss*ss);
@@ -831,8 +802,8 @@ void main(){
 
     //tonemap
     col*=EXPOSURE;
-    col*= 1.-1./(1.+lum(col.rgb));//rheinhard
- 	//col = vec4(1)- 1./(vec4(1) + pows(col,2.));//parnell
+    //col*= 1.-1./(1.+lum(col.rgb));//rheinhard
+ 	col = vec4(1)- 1./(vec4(1) + pows(col,2.));//parnell
  	//col = vec4(1)- 1./(exp(col)+1);
 
     col= pow(col,vec4(GAMMA));

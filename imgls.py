@@ -14,9 +14,11 @@ try:
 	rast= img.raster.flatten()
 	assert(len(rast)==w*h*4)
 except:
-	w= 2560
-	h= 1440
+	#w= 2560
+	#h= 1440
 	#w,h= (9075,6201)
+	w,h= (2560,1440)
+	#w,h= (3840,2160)#4k
 	rast= np.zeros(w*h*4)
 
 import pygame
@@ -79,19 +81,20 @@ _pingpong= textures[:2]
 tex_basis= textures[ 2]
 for i,pp in enumerate(textures):
 	glBindTexture(GL_TEXTURE_2D,pp)
-	MIPS= 2
-	glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA32F, w,h)#memory uninitialized, inits mipmap level range
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4)
+	MIPS= 1
+	glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA16F, w,h)#memory uninitialized, inits mipmap level range
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+	#glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 4)
 
 
-T= 4 if ANIM else 32;#number of tile divisions
-LS= 4;#kernel local_size
+T= 1 if ANIM else 128;#number of tile divisions
+LS= 8;#kernel local_size, must match
 wg= ( w//(LS*T)+1, h//(LS*T)+1, 1)
 
-SS= 8 #supersample width
+SS= 4 #supersample width
 
+appstart= perf_counter()
 profile_start= perf_counter()
 
 def render():
@@ -108,15 +111,15 @@ def render():
 				glUniform1f(4, time)
 				if ANIM:
 					glUniform1i(3, 1)#SS
-					glUniform1i(5,1<<10)#dist
-					glUniform1i(6,11)#bounces
+					glUniform1i(5,1<<8)#dist
+					glUniform1i(6,6)#bounces
 				else:
 					glUniform1i(3, SS)
-					glUniform1i(5,1<<17)
+					glUniform1i(5,1<<18)
 					glUniform1i(6,28)
 
 				if 'STAGE_GEOMAG' in args:
-					glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
+					glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
 				else:
 					#_pingpong= _pingpong[::-1]
 
@@ -127,7 +130,7 @@ def render():
 					#glActiveTexture(GL_TEXTURE0+1)
 					#glBindTexture(GL_TEXTURE_2D,tex_basis)
 
-					glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA32F)
+					glBindImageTexture(0,_pingpong[1], 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
 
 				glDispatchCompute(*wg)
 				glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT )
@@ -144,8 +147,8 @@ def render():
 if ANIM:
 	while 1:
 		render()
-		time+=1
-		sleep(1./35)
+		time= perf_counter()-appstart
+		sleep(1./35.)
 		chexit()
 else:
 	render()
