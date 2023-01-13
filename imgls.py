@@ -5,6 +5,7 @@ from time import *
 
 ANIM= 1
 time= 0
+frame=0
 
 img= None
 try:
@@ -46,8 +47,8 @@ def loadprogs():
 		com= f.read()
 	with open("imgls.comp.glsl") as f:
 		csh_src= f.read()
-	def prog(m):
-		try:
+	try:
+		def prog(m):
 			csh_src_p= ''.join([
 				'#version 450\n',
 				com,
@@ -57,28 +58,29 @@ def loadprogs():
 			])
 			csh_sh= shaders.compileShader(csh_src_p, GL_COMPUTE_SHADER)
 			return (shaders.compileProgram(csh_sh),m)
-		except Exception as e:
-			print('\nSHADERROR\n')
-			e= str(e)
-			e= e.replace('\\\\n','\n')
-			e= e.replace(  '\\n','\n')
-			e= e.replace(  '\\t','\t')
-			e= e.replace(  '\\t','\t')
-			e= e.replace(  '\\','')
-			e= e.replace('\\\\','')#fuck
-			import re
-			e= re.sub(r'\(([0-9]+)\)', r'\nFile "imgls.comp.glsl", line \1', e)
-			#sublime default error regex
-			print(e)
-			exit()
 
-	#progs= list(map(prog,[
-	#	['STAGE_GEOMAG'],
-	#	*([['STAGE_FLARE']]*5),
-	#	['STAGE_TONEMAP']
-	#	]))
-	global progs
-	progs= [prog(['FORWARD'])]
+		#progs= list(map(prog,[
+		#	['STAGE_GEOMAG'],
+		#	*([['STAGE_FLARE']]*5),
+		#	['STAGE_TONEMAP']
+		#	]))
+		global progs
+		progs= [prog(['FORWARD'])]
+
+	except Exception as e:
+		print('\nSHADERROR\n')
+		e= str(e)
+		e= e.replace('\\\\n','\n')
+		e= e.replace(  '\\n','\n')
+		e= e.replace(  '\\t','\t')
+		e= e.replace(  '\\t','\t')
+		e= e.replace(  '\\','')
+		e= e.replace('\\\\','')#fuck
+		import re
+		e= re.sub(r'\(([0-9]+)\)', r'\nFile "imgls.comp.glsl", line \1', e)
+		#sublime default error regex
+		print(e)
+		return
 
 textures= glGenTextures(3)
 _pingpong= textures[:2]
@@ -102,7 +104,6 @@ appstart= perf_counter()
 profile_start= perf_counter()
 
 def render():
-	loadprogs()#recompile every frame lmao
 	for ty in range(T):
 		for tx in range(T):
 
@@ -148,12 +149,17 @@ def render():
 			sleep(1./120)
 			chexit()
 
+loadprogs()
 if ANIM:
 	while 1:
 		render()
 		time= perf_counter()-appstart
+		frame+=1
 		sleep(1./35.)
 		chexit()
+		if frame%8==0: #recompile all the time lmao
+			#todo file modify hook
+			loadprogs()
 else:
 	render()
 
