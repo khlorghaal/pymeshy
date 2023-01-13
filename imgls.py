@@ -3,7 +3,7 @@ import png
 #import exr
 from time import *
 
-ANIM= 0
+ANIM= 1
 time= 0
 
 img= None
@@ -16,9 +16,10 @@ try:
 except:
 	#w= 2560
 	#h= 1440
-	#w,h= (9075,6201)
-	w,h= (2560,1440)
+	w,h= (2560//2,1440)#dev
+	#w,h= (2560,1440)
 	#w,h= (3840,2160)#4k
+	#w,h= (9075,6201)#poster
 	rast= np.zeros(w*h*4)
 
 import pygame
@@ -41,12 +42,15 @@ pygame.display.set_caption('____________________________')
 
 progs= []
 def loadprogs():
+	with open("com.glsl") as f:
+		com= f.read()
 	with open("imgls.comp.glsl") as f:
 		csh_src= f.read()
 	def prog(m):
 		try:
 			csh_src_p= ''.join([
 				'#version 450\n',
+				com,
 				*['#define %s 1\n'%d for d in m],
 				'#line 1\n',
 				csh_src
