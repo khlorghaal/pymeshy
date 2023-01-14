@@ -17,7 +17,7 @@ try:
 except:
 	#w= 2560
 	#h= 1440
-	w,h= (2560//2,1440)#dev
+	w,h= (int(2560//2),1440)#dev
 	#w,h= (2560,1440)
 	#w,h= (3840,2160)#4k
 	#w,h= (9075,6201)#poster
@@ -117,7 +117,7 @@ def render():
 				if ANIM:
 					glUniform1i(3, 1)#SS
 					glUniform1i(5,1<<8)#dist
-					glUniform1i(6,6)#bounces
+					glUniform1i(6,8)#bounces
 				else:
 					glUniform1i(3, SS)
 					glUniform1i(5,1<<18)

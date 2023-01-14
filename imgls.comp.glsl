@@ -29,9 +29,9 @@ layout(location=6) uniform int MAX_BOUNCE;//reflections
 
 
 
-const float TRANSMITTANCE= .81;//this affects lumianance spatial freqenz of result; .84 is especially magical
-const float EXPOSURE= 1.9;
-const float GAMMA=  .65;
+const float TRANSMITTANCE= .85;//affects lumianance spatial freqenz of result; .84 is especially magical
+const float EXPOSURE= 3.;
+const float GAMMA=  2.1;
 
 
 const vec3 COLOR_A = vec3( .6,0.0,0.10);
@@ -40,11 +40,16 @@ const vec3 COLOR_C = vec3( -0.0,0.0,1.);
 
 const float IOR= .95;//high abs ior will cause rapid extinction
 
+const float ROUGH= .1;
+
+vec3 scatter(vec3 v, float s){
+	return vnsesv(v);
+}
 
 
 bool stagger(vec3 p){
 	int n= 1;
-	return 
+	return \
 	((int(int(p.x)+int(p.x<0.))&n)==0)&&
 	((int(int(p.y)+int(p.y<0.))&n)==0)&&
 	((int(int(p.z)+int(p.z<0.))&n)==0);
@@ -57,21 +62,24 @@ vec3 img(vec2 uv){
     vec3 ra= vec3( uvn, -1.);
     vec3 rc= vec3( uvn, .0 );
 
-    _FOV= .65;
+    _FOV= 1.;
     ray r= look_persp_orbit(uvn,
-    	vec2((3.+time*.00  )/8.,
+    	vec2((3.+time*2.0  )/8.,
     		 //(1.+time*.03)/8. )*TAU,
-    		 (1.+time*.0   )/8.)*TAU,
-    	2.5);
+    		 (1.+time*.75   )/8.)*TAU,
+    	1.5);
     ra= r.a;
     rc= r.c*1.;
 
-    rc+=.5;//center
+    rc+=.5;//translate
+    rc.y+= 2.;
 
     
-    float ior= IOR + sin(time*.32)*sin(time*.18)*1.98;
+    float ior= sin(time*16.)*-.4 + sin(time*5.5)*.5 + .95;
+    //ior= sqrt(ior);
+    ior= ior*ior*ior;
     //float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
-    ior= 1-.6;
+    //ior= 1.33;
 
     float iorrcp= 1./ior;
     
@@ -112,12 +120,12 @@ vec3 img(vec2 uv){
 
 		
 		bool ps= s;//previous
-        s= stagger(p);
-		if(s^^ps){//transmission
-			ass(len(v)>ETA, WHITE);
+        s= stagger(p);//true:entering , false:exiting medium
+		if(s^^ps){ // transmission
+			ass(len(v)>ETA && len(n)>ETA, WHITE);
 			vec3 r;
 			r= refract(v,n, s?ior:iorrcp);
-            ass(real(r),GREEN);//FIXME
+			//r= norm(r); i dont know why this is undesirable
 			if(eqf(maxv(r),0.)){
             	#ifdef INTERNAL_REFLECTION
                     r= reflect(v,n);
@@ -129,32 +137,21 @@ vec3 img(vec2 uv){
                		break;
             	#endif
 			}
+
+            vec3 rho= rand3(sum(v));
+			r+= 1.-exp2(-rho*rho*ROUGH);
+
 			v= norm(r);
             if(s){//hit
                 //brdf
-
-
                 vec3 C= abs(n);
                 vec3 c= 
                       C.x*COLOR_A
                     + C.y*COLOR_B
                     + C.z*COLOR_C;
-                const float h= .9;
+                const float h= .7;
                 float l= sat(maxv(1.-abs(dp))-h)/(1.-h);
                 c*= l;
-
-                /*
-                vec3 _c[]= vec3[](
-
-					vec3( 0.0, .95 , 0.0),
-					vec3(  .9, 0.  , .7),
-					vec3( 0.0,  .125,  .94),
-					-WHITE*.25
-                );
-                c*= _c[b/1%4];
-                */
-
-                //c.r+= float(b>)*64.;
 
                 a+= c*cmag;
                 cmag*= TRANSMITTANCE;
@@ -175,9 +172,6 @@ vec3 img(vec2 uv){
     
     return a*cnorm;
 }
-
-
-
 
 
 
@@ -220,7 +214,7 @@ void main(){
     //tonemap
     col*=EXPOSURE;
     //col*= 1.-1./(1.+lum(col.rgb));//rheinhard
- 	col = vec4(1)- 1./(vec4(1) + pows(col,2.));//parnell
+ 	col = vec4(1)- 1./(vec4(1) + pows(col,2.2));//parnell
  	//col = vec4(1)- 1./(exp(col)+1);
 
     col= pow(col,vec4(GAMMA));
