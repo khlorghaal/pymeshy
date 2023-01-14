@@ -27,7 +27,7 @@ layout(location=6) uniform int MAX_BOUNCE;//reflections
 
 //const float time= 1.;
 
-
+#define CAM_MOVE
 
 const float TRANSMITTANCE= .85;//affects lumianance spatial freqenz of result; .84 is especially magical
 const float EXPOSURE= 3.;
@@ -40,7 +40,7 @@ const vec3 COLOR_C = vec3( -0.0,0.0,1.);
 
 const float IOR= .95;//high abs ior will cause rapid extinction
 
-const float ROUGH= .1;
+const float ROUGH= .0125;
 
 vec3 scatter(vec3 v, float s){
 	return vnsesv(v);
@@ -62,12 +62,17 @@ vec3 img(vec2 uv){
     vec3 ra= vec3( uvn, -1.);
     vec3 rc= vec3( uvn, .0 );
 
-    _FOV= 1.;
-    ray r= look_persp_orbit(uvn,
-    	vec2((3.+time*2.0  )/8.,
-    		 //(1.+time*.03)/8. )*TAU,
-    		 (1.+time*.75   )/8.)*TAU,
-    	1.5);
+    _FOV= 2.;
+	ray r= look_persp_orbit(uvn,
+	    	vec2(
+    #ifdef CAM_MOVE
+	    		(3.+time*2.0  )/8.,
+	    		(1.+time*.75   )/8.)*TAU,
+    #else
+	    		(3.)/8.,
+	    		(.8)/8.)*TAU,
+    #endif
+    	    	1.5);
     ra= r.a;
     rc= r.c*1.;
 
@@ -75,11 +80,11 @@ vec3 img(vec2 uv){
     rc.y+= 2.;
 
     
-    float ior= sin(time*16.)*-.4 + sin(time*5.5)*.5 + .95;
+    float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
     //ior= sqrt(ior);
     ior= ior*ior*ior;
     //float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
-    //ior= 1.33;
+    ior= 1.33;
 
     float iorrcp= 1./ior;
     
@@ -138,8 +143,9 @@ vec3 img(vec2 uv){
             	#endif
 			}
 
-            vec3 rho= rand3(sum(v));
-			r+= 1.-exp2(-rho*rho*ROUGH);
+            vec3 rho= rand3(sum(v)*.001);
+
+			r+= 1.-exp2(-rho*rho* lerp(ROUGH/16.,ROUGH*16., nmapu(sin(time*8.)) ) );
 
 			v= norm(r);
             if(s){//hit
