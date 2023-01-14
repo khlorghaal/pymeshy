@@ -3,7 +3,7 @@ import png
 #import exr
 from time import *
 
-ANIM= 1
+ANIM= 0
 time= 0
 frame=0
 
@@ -17,8 +17,8 @@ try:
 except:
 	#w= 2560
 	#h= 1440
-	w,h= (int(2560//2),1440)#dev
-	#w,h= (2560,1440)
+	#w,h= (int(2560//2),1440)#dev
+	w,h= (2560,1440)
 	#w,h= (3840,2160)#4k
 	#w,h= (9075,6201)#poster
 	rast= np.zeros(w*h*4)
@@ -98,7 +98,7 @@ T= 1 if ANIM else 128;#number of tile divisions
 LS= 8;#kernel local_size, must match
 wg= ( w//(LS*T)+1, h//(LS*T)+1, 1)
 
-SS= 4 #supersample width
+SS= 3 #supersample width
 
 appstart= perf_counter()
 profile_start= perf_counter()
@@ -120,8 +120,8 @@ def render():
 					glUniform1i(6,8)#bounces
 				else:
 					glUniform1i(3, SS)
-					glUniform1i(5,1<<18)
-					glUniform1i(6,28)
+					glUniform1i(5,1<<13)
+					glUniform1i(6,16)
 
 				if 'STAGE_GEOMAG' in args:
 					glBindImageTexture(0,tex_basis, 0,False,0, GL_WRITE_ONLY, GL_RGBA16F)
@@ -155,7 +155,7 @@ if ANIM:
 		render()
 		time= perf_counter()-appstart
 		frame+=1
-		sleep(1./35.)
+		sleep(1./60.)
 		chexit()
 		if frame%8==0: #recompile all the time lmao
 			#todo file modify hook

@@ -29,18 +29,18 @@ layout(location=6) uniform int MAX_BOUNCE;//reflections
 
 #define CAM_MOVE
 
-const float TRANSMITTANCE= .85;//affects lumianance spatial freqenz of result; .84 is especially magical
-const float EXPOSURE= 3.;
-const float GAMMA=  2.1;
+const float TRANSMITTANCE= .824;//affects lumianance spatial freqenz of result; .84 is especially magical
+const float EXPOSURE= 1.8;
+const float GAMMA=  .8;
 
 
-const vec3 COLOR_A = vec3( .6,0.0,0.10);
-const vec3 COLOR_B = vec3( -0.0,.30,0.05);
-const vec3 COLOR_C = vec3( -0.0,0.0,1.);
+const vec3 COLOR_A = vec3( .8,0.2,-0.10);
+const vec3 COLOR_B = vec3( -0.1,.28,-0.05);
+const vec3 COLOR_C = vec3( -0.1,-.20,1.);
 
-const float IOR= .95;//high abs ior will cause rapid extinction
+const float IOR= .25;//high abs ior will cause rapid extinction
 
-const float ROUGH= .0125;
+const float ROUGH= .01;
 
 vec3 scatter(vec3 v, float s){
 	return vnsesv(v);
@@ -62,21 +62,20 @@ vec3 img(vec2 uv){
     vec3 ra= vec3( uvn, -1.);
     vec3 rc= vec3( uvn, .0 );
 
-    _FOV= 2.;
-	ray r= look_persp_orbit(uvn,
-	    	vec2(
-    #ifdef CAM_MOVE
-	    		(3.+time*2.0  )/8.,
-	    		(1.+time*.75   )/8.)*TAU,
-    #else
-	    		(3.)/8.,
-	    		(.8)/8.)*TAU,
-    #endif
-    	    	1.5);
+    _FOV= 10.0;
+	ray r= look_persp_orbit(uvn,vec2(
+    	#ifdef CAM_MOVE
+    		(3.+time*2.0  )/8.,
+    		(1.+time*.75   )/8.)*TAU,
+		#else
+    		(1.5)/8.,
+    		(10.9)/8.)*TAU,
+    	#endif
+    	4.5);
     ra= r.a;
-    rc= r.c*1.;
+    rc= r.c*1.-40.;
 
-    rc+=.5;//translate
+    //rc+=.5;//translate
     rc.y+= 2.;
 
     
@@ -84,7 +83,7 @@ vec3 img(vec2 uv){
     //ior= sqrt(ior);
     ior= ior*ior*ior;
     //float ior= IOR + sin(time*.04)*sin(time*.03)*1.98;
-    ior= 1.33;
+    ior= .233;
 
     float iorrcp= 1./ior;
     
@@ -143,9 +142,9 @@ vec3 img(vec2 uv){
             	#endif
 			}
 
-            vec3 rho= rand3(sum(v)*.001);
+            vec3 rho= rand3(sum(p)*.0002);
 
-			r+= 1.-exp2(-rho*rho* lerp(ROUGH/16.,ROUGH*16., nmapu(sin(time*8.)) ) );
+			r+= 1.-exp2(-rho*rho*  ROUGH * nmapu(cos(time*6.)) );
 
 			v= norm(r);
             if(s){//hit
@@ -155,7 +154,7 @@ vec3 img(vec2 uv){
                       C.x*COLOR_A
                     + C.y*COLOR_B
                     + C.z*COLOR_C;
-                const float h= .7;
+                const float h= .2;
                 float l= sat(maxv(1.-abs(dp))-h)/(1.-h);
                 c*= l;
 
