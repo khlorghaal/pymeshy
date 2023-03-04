@@ -23,6 +23,10 @@ except:
 	#w,h= (9075,6201)#poster
 	rast= np.zeros(w*h*4)
 
+import sys
+from IPython.core import ultratb
+sys.excepthook = ultratb.FormattedTB(mode='Plain', color_scheme='Linux', call_pdb=False)
+
 import pygame
 from pygame.locals import *
 
