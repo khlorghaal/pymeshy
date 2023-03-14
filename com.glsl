@@ -217,15 +217,15 @@ vec4 hashf(vec4 x){ return abs(vec4(hash(ivec4(fixed16(x)         ))    ))/INT_M
 #define R3B vec3(.99111, .98414, .9935)
 #define R4A vec4(.99412, .99343, .99565, .99473)
 #define R4B vec4(.99612, .99836, .99387, .99376)
-vec1 rand (vec1 x){ return hashf(x);   }
-vec2 rand (vec2 x){ return hashf(x*hashf(x+x.yx)); }
-vec3 rand (vec3 x){ return hashf(x*1.e2*hashf(R3A+x+x.yzx+x.zxy)); }
-vec4 rand (vec4 x){ return hashf(x*hashf(x+x.yzwx+x.zwxy+x.wxyz)); }
-vec1 rand1(vec2 x){ return hashf(dot(x*R2A-R2B,-x*R2B+R2A)/x.x);  }
-vec1 rand1(vec3 x){ return hashf(dot(x+R3A-R3B,-x+R3B+R3A));  }
-vec1 rand1(vec4 x){ return hashf(dot(x+R4A-R4B,-x+R4B+R4A));  }
-vec2 rand2(vec1 x){ return hashf(x+R2A);   }
-vec3 rand3(vec1 x){ return hashf(x+R3A);   }
+vec1 rand11 (vec1 x){ return hashf(x);   }
+vec2 rand22 (vec2 x){ return hashf(x*hashf(x+x.yx)); }
+vec3 rand33 (vec3 x){ return hashf(x*1.e2*hashf(R3A+x+x.yzx+x.zxy)); }
+vec4 rand44 (vec4 x){ return hashf(x*hashf(x+x.yzwx+x.zwxy+x.wxyz)); }
+vec1 rand21(vec2 x){ return hashf(dot(x*R2A-R2B,-x*R2B+R2A)/x.x);  }
+vec1 rand31(vec3 x){ return hashf(dot(x+R3A-R3B,-x+R3B+R3A));  }
+vec1 rand41(vec4 x){ return hashf(dot(x+R4A-R4B,-x+R4B+R4A));  }
+vec2 rand12(vec1 x){ return hashf(x+R2A);   }
+vec3 rand13(vec1 x){ return hashf(x+R3A);   }
 
 float bilerp(
 	float nn, float np,
@@ -276,15 +276,15 @@ vec3 trilerp(vec3 nnn,vec3 nnp,vec3 npn,vec3 npp,vec3 pnn,vec3 pnp,vec3 ppn,vec3
 }
 
 
-float vnse(vec1 x){ return lerp(rand(floor(x)),rand(ceil(x)),fract(x)); }
+float vnse(vec1 x){ return lerp(rand11(floor(x)),rand11(ceil(x)),fract(x)); }
 float vnse(vec2 p){
 	vec2 fr= fract(p);
 	vec2 f= floor(p);
 	vec2 c= ceil(p);
-	float nn= rand1(vec2(f.x,f.y));
-	float np= rand1(vec2(f.x,c.y));
-	float pn= rand1(vec2(c.x,f.y));
-	float pp= rand1(vec2(c.x,c.y));
+	float nn= rand21(vec2(f.x,f.y));
+	float np= rand21(vec2(f.x,c.y));
+	float pn= rand21(vec2(c.x,f.y));
+	float pp= rand21(vec2(c.x,c.y));
 	vec4 v= vec4(nn,np,pn,pp);
 	vec2 lx= lerp(v.xy,v.zw, fr.xx);
 	return lerp( lx.x,lx.y, fr.y );
@@ -293,14 +293,14 @@ float vnse(vec3 p){
 	vec3 fr= fract(p);
 	vec3 f= floor(p);
 	vec3 c= ceil(p);
-	float nnn= rand1(vec3(f.x,f.y,f.z));
-	float nnp= rand1(vec3(f.x,f.y,c.z));
-	float npn= rand1(vec3(f.x,c.y,f.z));
-	float npp= rand1(vec3(f.x,c.y,c.z));
-	float pnn= rand1(vec3(c.x,f.y,f.z));
-	float pnp= rand1(vec3(c.x,f.y,c.z));
-	float ppn= rand1(vec3(c.x,c.y,f.z));
-	float ppp= rand1(vec3(c.x,c.y,c.z));
+	float nnn= rand31(vec3(f.x,f.y,f.z));
+	float nnp= rand31(vec3(f.x,f.y,c.z));
+	float npn= rand31(vec3(f.x,c.y,f.z));
+	float npp= rand31(vec3(f.x,c.y,c.z));
+	float pnn= rand31(vec3(c.x,f.y,f.z));
+	float pnp= rand31(vec3(c.x,f.y,c.z));
+	float ppn= rand31(vec3(c.x,c.y,f.z));
+	float ppp= rand31(vec3(c.x,c.y,c.z));
 	vec4 zn= vec4(
 		nnn,
 		npn,
@@ -323,8 +323,8 @@ float perlin(float p){
 	float frn= fr-1.;
 	float f= floor(p);
 	float c= ceil(p);
-	float a= nmaps(rand(f));
-	float b= nmaps(rand(c));
+	float a= nmaps(rand11(f));
+	float b= nmaps(rand11(c));
 	return lerp(a,b,smooth(fr));
 }
 float perlin(vec3 p){
@@ -332,14 +332,14 @@ float perlin(vec3 p){
 	vec3 frn= fr-1.;
 	vec3 f= floor(p);
 	vec3 c= ceil(p);
-	vec3 nnn= nmaps(rand(vec3(f.x,f.y,f.z)));
-	vec3 nnp= nmaps(rand(vec3(f.x,f.y,c.z)));
-	vec3 npn= nmaps(rand(vec3(f.x,c.y,f.z)));
-	vec3 npp= nmaps(rand(vec3(f.x,c.y,c.z)));
-	vec3 pnn= nmaps(rand(vec3(c.x,f.y,f.z)));
-	vec3 pnp= nmaps(rand(vec3(c.x,f.y,c.z)));
-	vec3 ppn= nmaps(rand(vec3(c.x,c.y,f.z)));
-	vec3 ppp= nmaps(rand(vec3(c.x,c.y,c.z)));
+	vec3 nnn= nmaps(rand33(vec3(f.x,f.y,f.z)));
+	vec3 nnp= nmaps(rand33(vec3(f.x,f.y,c.z)));
+	vec3 npn= nmaps(rand33(vec3(f.x,c.y,f.z)));
+	vec3 npp= nmaps(rand33(vec3(f.x,c.y,c.z)));
+	vec3 pnn= nmaps(rand33(vec3(c.x,f.y,f.z)));
+	vec3 pnp= nmaps(rand33(vec3(c.x,f.y,c.z)));
+	vec3 ppn= nmaps(rand33(vec3(c.x,c.y,f.z)));
+	vec3 ppp= nmaps(rand33(vec3(c.x,c.y,c.z)));
 	float d_nnn= dot(nnn, vec3(fr .x, fr .y, fr .z));
 	float d_nnp= dot(nnp, vec3(fr .x, fr .y, frn.z));
 	float d_npn= dot(npn, vec3(fr .x, frn.y, fr .z));
@@ -372,10 +372,10 @@ vec2 vnsesv(vec2 p){
 	vec2 frn= fr-1.;
 	vec2 f= floor(p);
 	vec2 c= ceil(p);
-	vec2 nn= rand(vec2(f.x,f.y));
-	vec2 np= rand(vec2(f.x,f.y));
-	vec2 pn= rand(vec2(f.x,c.y));
-	vec2 pp= rand(vec2(f.x,c.y));
+	vec2 nn= rand22(vec2(f.x,f.y));
+	vec2 np= rand22(vec2(f.x,f.y));
+	vec2 pn= rand22(vec2(f.x,c.y));
+	vec2 pp= rand22(vec2(f.x,c.y));
 
 	return bilerp(nn,np,pn,pp, smooth(fr));
 }
@@ -384,14 +384,14 @@ vec3 vnsesv(vec3 p){
 	vec3 frn= fr-1.;
 	vec3 f= floor(p);
 	vec3 c= ceil(p);
-	vec3 nnn= rand(vec3(f.x,f.y,f.z));
-	vec3 nnp= rand(vec3(f.x,f.y,c.z));
-	vec3 npn= rand(vec3(f.x,c.y,f.z));
-	vec3 npp= rand(vec3(f.x,c.y,c.z));
-	vec3 pnn= rand(vec3(c.x,f.y,f.z));
-	vec3 pnp= rand(vec3(c.x,f.y,c.z));
-	vec3 ppn= rand(vec3(c.x,c.y,f.z));
-	vec3 ppp= rand(vec3(c.x,c.y,c.z));
+	vec3 nnn= rand33(vec3(f.x,f.y,f.z));
+	vec3 nnp= rand33(vec3(f.x,f.y,c.z));
+	vec3 npn= rand33(vec3(f.x,c.y,f.z));
+	vec3 npp= rand33(vec3(f.x,c.y,c.z));
+	vec3 pnn= rand33(vec3(c.x,f.y,f.z));
+	vec3 pnp= rand33(vec3(c.x,f.y,c.z));
+	vec3 ppn= rand33(vec3(c.x,c.y,f.z));
+	vec3 ppp= rand33(vec3(c.x,c.y,c.z));
 
 	return trilerp(nnn,nnp,npn,npp,pnn,pnp,ppn,ppp, smooth(fr));
 }
@@ -405,7 +405,7 @@ float worley(vec3 c){
     for(int j=-1; j<=1; j++){
     for(int k=-1; k<=1; k++){
         vec3 g= vec3(i,j,k)+cfl;
-        vec3 p= rand(g)+g;
+        vec3 p= rand33(g)+g;
         float l= len(p-c);
         acc= min(acc,l);
     }}}
