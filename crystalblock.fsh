@@ -4,10 +4,7 @@
 //#define DEBUG_NORMAL
 
 
-//vanil
-uniform sampler2D Sampler0;
-uniform vec4 ColorModulator;//idfk what this is
-//where is the lightmap???
+
 
 smooth in vec4 vertexColor;
 smooth in vec2 texCoord0;
@@ -18,12 +15,12 @@ out vec4 fragColor;
 
 
 
-uniform float time;
-//uniform vec3 ambient=      vec3(1.0, 1.0, 5.)/255.;
-//uniform vec3 reflective=   vec3(0.1, 0.6, 1.)*1.;
-//uniform vec3 transmissive= vec3(0.8, 1.0, 1.)*.8;
-//uniform float rough= .5;
-//uniform float IOR= 1.1;
+layout(location=2) uniform float time;
+layout(location=3) uniform vec3 ambient;//=      vec3(1.0, 1.0, 5.)/255.;
+layout(location=4) uniform vec3 reflective;//=   vec3(0.1, 0.6, 1.)*1.;
+layout(location=5) uniform vec3 transmissive;//= vec3(0.8, 1.0, 1.)*.8;
+layout(location=6) uniform float rough;//= .5;
+layout(location=7) uniform float IOR;//= 1.1;
 
 const int bounces= 3;
 
@@ -37,8 +34,9 @@ const int bounces= 3;
 
 vec3 env(vec3 V){
 	V = V*V;
-	V+= V*V;
-	float l= sum(V.xz)/3.;
+	//V+= V*V;
+	V/= 4;
+	float l= sum(V)/3.;
 	return vec3(l);
 }
 
@@ -70,7 +68,7 @@ void fsurf(
 	#endif
 	){
 
-	vec4 tx= tex(Sampler0,uv);
+	vec4 tx= vec4(0);//tex(Sampler0,uv);
 
 
 
@@ -88,8 +86,14 @@ void fsurf(
 
 
 void main(){
-	/*
-	vec3 nse0= nseN(  );
+	vec4  C= vertexColor;
+	vec2 UV= texCoord0;
+	vec3  N= norm(normal);//viewspace
+	vec3  P= pos;//modelspace
+
+	const vec3 V= BLUE;//view vector
+
+	vec3 nse0= nseN( P );
 
 	N= lerp( N, nse0, rough);
 	
@@ -100,8 +104,9 @@ void main(){
 	//reflection
 	vec3 rfl= reflect(V,N);
 		
-	vec3 R= Pm;
+	vec3 R= P;
 	float a= 1.;
+	
 	count(bounces){
 		//refraction
 		vec3 rfr= refract(V,N,IOR);
@@ -112,12 +117,15 @@ void main(){
 			
 		//heuristic
 		N= lerp(N,nseN(R),.8);
-		N= norm(N);    
+		N= norm(N);
 		R+= (rfr+N)*.5;
 		
-		a*= transmissive;
+		//a*= transmissive;
+		a*= .8;
 	}
 	c/= float(bounces);
+	
+
 	
 	c+= env(rfl) * reflective;
 
@@ -136,7 +144,7 @@ void main(){
 		c= Nv*.5+.5;
 	#endif
 
-	gl_FragColor = vec4(c,a) * ColorModulator;
-	*/
-	fragColor = vec4(abs(normal), 1);
+	c= 1.-1./(1.5-pows(c,2.));
+
+	fragColor = vec4(c,a);
 }

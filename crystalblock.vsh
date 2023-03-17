@@ -32,6 +32,8 @@ void main() {
 
     //vec3 N= snap_axis(Normal);//todo are of the use this be is needinged?
     vec3 N= Normal;
-    normal = N;
-    //normal = norm((ModelViewMat * vec4(N,1) ).rgb);
+    //normal = N;
+    normal = norm((ModelViewMat * vec4(N,0) ).rgb);
+
+    pos= Position* 16;
 }
