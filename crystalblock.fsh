@@ -6,6 +6,8 @@
 
 #define OPAQUE 1
 
+#define TEXTURE_NOISE 1
+
 smooth in vec4 vertexColor;
 smooth in vec2 texCoord0;
 smooth in vec3 normal;//viewspace
@@ -43,7 +45,13 @@ vec3 env(vec3 V){
 }
 
 vec3 nseN(vec3 v){
-	return rand33(floor((v+.25)*4.))*2.-1.;
+	v= floor((v+.25)*4.);
+	return rand33(v)*2.-1.;
+}
+vec3 nseUV(vec2 uv){
+	uv= floor((uv+.25)*4.);
+	return sum(tex(tex0,uv).rgb)/3.
+		*rand23(uv)*2.-1.;
 }
 
 
@@ -96,11 +104,16 @@ void main(){
 	vec3  N= norm(normal);//viewspace
 	vec3  P= pos;//modelspace
 
-	vec3 alb= tex(tex0, P.xz);
+	vec3 alb= tex(tex0, UV).rgb;
+	//fragColor= vec4(alb,1); return;
 	
 	const vec3 V= BLUE;//view vector
 
+	fragColor= vec4(0,fract(UV),1); return;
+	fragColor= vec4(nseUV(UV),1); return;
+
 	vec3 nse0= nseN( P );
+	//fragColor= vec4(nse0,1); return;
 	N= N + distr(nse0);
 	
 	N= norm(N);
@@ -109,7 +122,8 @@ void main(){
 	
 	//reflection
 	vec3 rfl= reflect(V,N);
-	float FR= abs(1-rfl.z);
+	float FR0= abs(1-rfl.z);
+	float FR1= FR0*FR0;
 		
 	vec3 R= P;
 	float a= 1.;
@@ -131,7 +145,7 @@ void main(){
 	}
 	c/= float(bounces);
 	
-	c+= reflective*FR + FR;//fresnel with uncolored (white) factor
+	c+= reflective*FR0 + (reflective/2+.5)*FR1;//fresnel with half-white factor
 
 	c*= 2.;
 	c*= 1.-(1./(1.+pow(maxv(c),.5)));

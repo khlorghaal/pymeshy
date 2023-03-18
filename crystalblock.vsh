@@ -36,4 +36,13 @@ void main() {
     normal = norm((ModelViewMat * vec4(N,0) ).rgb);
 
     pos= Position* 16;
+
+    if(     N.x==0.)
+      texCoord0= pos.xy;
+    else if(N.y==0.)
+      texCoord0= pos.yz;
+    else if(N.z==0.)
+      texCoord0= pos.zx;
+
+    texCoord0*= .4;
 }

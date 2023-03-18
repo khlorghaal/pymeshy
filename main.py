@@ -207,9 +207,7 @@ if ANIM:
 else:
 	render()
 
-del rast
 rast= glReadPixels(0,0,w,h, GL_RGB,GL_FLOAT)
-
 pygame.display.flip()
 
 print('render time %sms'%((perf_counter()-profile_start)*1000))

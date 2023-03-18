@@ -219,6 +219,7 @@ vec4 hashf(vec4 x){ return abs(vec4(hash(ivec4(fixed16(x)         ))    ))/INT_M
 #define R4B vec4(.99612, .99836, .99387, .99376)
 vec1 rand11 (vec1 x){ return hashf(x);   }
 vec2 rand22 (vec2 x){ return hashf(x*hashf(x+x.yx)); }
+vec3 rand23 (vec2 x){ return hashf((x.xyx*R3A+R3B)+hashf(R3A-x.yxy*R3B)); }
 vec3 rand33 (vec3 x){ return hashf(x*1.e2*hashf(R3A+x+x.yzx+x.zxy)); }
 vec4 rand44 (vec4 x){ return hashf(x*hashf(x+x.yzwx+x.zwxy+x.wxyz)); }
 vec1 rand21(vec2 x){ return hashf(dot(x*R2A-R2B,-x*R2B+R2A)/x.x);  }
