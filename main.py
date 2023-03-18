@@ -140,16 +140,18 @@ def render():
 	glUseProgram(prog)
 
 	vm= view.do()
+	view.m[0]+= .00025
 	mmv= vm.v
 	mp=  vm.p
 	glUniformMatrix4fv(0,1,True,mmv)
 	glUniformMatrix4fv(1,1,True,mp)
 	glUniform1f(2, time) #time
-	glUniform3f(3, 0.004,0.004,0.02)#ambient
+	glUniform3f(3, 0.05,0.05,0.05)#ambient
 	glUniform3f(4, 0.1  ,0.6  ,1.  )#reflective
 	glUniform3f(5, 0.6  , .75 ,0.85)#albedo
 	glUniform1f(6, .2 ) #rough
-	glUniform1f(7, 1.3) #IOR
+	glUniform1f(7, 1.45) #IOR
+	glUniform1f(8, .4) #fresnel magnitude
 
 	glDisable(GL_BLEND)
 
@@ -177,7 +179,10 @@ if ANIM:
 			sleep(1./60.)
 			if frame%8==0: #recompile all the time lmao
 				#todo file modify hook
-				loadprog()
+				try:
+					loadprog()
+				except:
+					print('badprog')
 
 			#input
 			for e in pygame.event.get():
@@ -191,7 +196,7 @@ if ANIM:
 						cy= h-cy - h//2
 						cx/= w
 						cy/= h
-						view.m= (cx,cy)
+						view.m= [cx,cy]
 
 				if e.type==TEXTINPUT:
 					continue

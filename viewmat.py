@@ -27,7 +27,7 @@ from dataclasses import dataclass
 
 @dataclass
 class state:
-    m= (0,0)
+    m= [0,0]
     z= 0
     def do(s):
         return do(s)
@@ -47,11 +47,11 @@ def do(state):
     x= m[0]*6.28
     y= m[1]*3.14
     v= matmul(roty(y),rotx(x))*exp(z*.25)
-    fov= .25
+    fov= .2
     p= array([
         [1,0,  0, 0],
         [0,1,  0, 0],
-        [0,0,fov,.25],
+        [0,0,fov, 0],
         [0,0,fov, 1]
         ])
     v= pad(v,(0,1),mode='constant',constant_values=0)

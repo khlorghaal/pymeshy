@@ -10,10 +10,14 @@ layout(location=2) in vec3 Normal;
 in vec4 Color;
 in vec2 UV2;
 
+//worldspace elided onto modelspace
+
 smooth out vec4 vertexColor;
 smooth out vec2 texCoord0;
 smooth out vec3 normal;
-smooth out vec3 pos;
+smooth out vec3 Pm;//position modelspace
+smooth out vec3 Pv;//position viewspace
+smooth out vec3 Vm;//viewvector modelspace
 
 vec3 snap_axis(vec3 v){  
   vec3 av= abs(v);
@@ -22,8 +26,9 @@ vec3 snap_axis(vec3 v){
 }
 
 void main() {
-    pos= Position;
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1);
+    Pm= Position*16;
+    Pv= mat3(ModelViewMat)*Pm;
+    gl_Position = ProjMat*vec4(Pv, 1);
     //should premultipy mats, but that would violate rig interface
     //rig format precedes badness
     
@@ -35,14 +40,14 @@ void main() {
     //normal = N;
     normal = norm((ModelViewMat * vec4(N,0) ).rgb);
 
-    pos= Position* 16;
-
-    if(     N.x==0.)
-      texCoord0= pos.xy;
-    else if(N.y==0.)
-      texCoord0= pos.yz;
-    else if(N.z==0.)
-      texCoord0= pos.zx;
+    if(     N.x!=0.)
+      texCoord0= Pm.yz;
+    else if(N.y!=0.)
+      texCoord0= Pm.xz;
+    else if(N.z!=0.)
+      texCoord0= Pm.xy;
 
     texCoord0*= .4;
+
+    Vm= mat3(ModelViewMat)*BLUE;
 }

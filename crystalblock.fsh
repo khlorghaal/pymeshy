@@ -11,7 +11,9 @@
 smooth in vec4 vertexColor;
 smooth in vec2 texCoord0;
 smooth in vec3 normal;//viewspace
-smooth in vec3 pos;//modelspace
+smooth in vec3 Pm;//position modelspace
+smooth in vec3 Pv;//position viewspace
+smooth in vec3 Vm;//viewvector modelspace
 
 out vec4 fragColor;
 
@@ -23,10 +25,11 @@ layout(location=4) uniform vec3 reflective;
 layout(location=5) uniform vec3 albedo;
 layout(location=6) uniform float rough;
 layout(location=7) uniform float IOR;
+layout(location=8) uniform float FRm;//fresnel magnitude
 
-layout(location=8) uniform sampler2D tex0;
+uniform sampler2D tex0;
 
-const int bounces= 4;
+const int bounces= 3;
 
 
 //layout(location=0) smooth in vec3 v_Nm;
@@ -35,11 +38,9 @@ const int bounces= 4;
 //layout(location=3) smooth in vec3 Pv;
 //layout(location=4) smooth in vec4 Pp;
 
-
 vec3 env(vec3 V){
-	V= abs(V);
-	V = V*V*V;
-	//V+= V*V;
+	V = V*V*.5;
+	V+= V*V;
 	float l= sum(V)/3;
 	return vec3(l);
 }
@@ -49,106 +50,72 @@ vec3 nseN(vec3 v){
 	return rand33(v)*2.-1.;
 }
 vec3 nseUV(vec2 uv){
-	uv= floor((uv+.25)*4.);
-	return sum(tex(tex0,uv).rgb)/3.
-		*rand23(uv)*2.-1.;
+	float a= dot(tex(tex0,uv).rgb,vec3(.3,.55,.15));//luminance
+	a= sqrt(a);//contrast
+	uv= floor((uv+1./16)*16.);
+	vec3 b= rand23(uv);
+	return norm(exp(-b*a*a));
 }
 
 
-/*
-rgb behaves similarly to emission
-	luminance as opacity
-
-alpha channel
-	 =1 functions normally
-	!=1 is a flowmap
-	where flow goes from [0,1)
-	such that a gradient along [0,1)
-	will make a looping pattern
-	a longer gradient will have higher flow velocity
-
-output emis not premultiplied
-*/
-/*
-void fsurf(
-	in vec2 uv,
-	inout vec3 N,
-	out vec3 emis,
-	#ifndef OPAQUE
-		out float opac
-	#endif
-	){
-
-	vec4 tx= vec4(0);//tex(Sampler0,uv);
-
-
-
-	//color
-	emis= tx.rgb;
-
-	//flow
-	float t= tx.a;
-	if(t!=1.){
-		t= tri(t);//
-		emis*= 1+t; 
-	}
-
-}
-*/
-
-#define distr(x) exp( -x*x * rough)
+#define DBREAK(c) fragColor= vec4(vec3(c),1); return;
 
 void main(){
 	vec4  C= vertexColor;
 	vec2 UV= texCoord0;
 	vec3  N= norm(normal);//viewspace
-	vec3  P= pos;//modelspace
+	vec3 N0= N;
 
-	vec3 alb= tex(tex0, UV).rgb;
-	//fragColor= vec4(alb,1); return;
+	vec3 alb= 
+		//tex(tex0, UV).rgb;
+		albedo;
+	//DBREAK(alb)
 	
 	const vec3 V= BLUE;//view vector
 
-	fragColor= vec4(0,fract(UV),1); return;
-	fragColor= vec4(nseUV(UV),1); return;
+	vec3 nse0=
+		//nseN( P );
+		nseUV(UV)*rough;
+	//DBREAK(nmapu(nse0))
 
-	vec3 nse0= nseN( P );
-	//fragColor= vec4(nse0,1); return;
-	N= N + distr(nse0);
-	
+	N= N + nse0;
 	N= norm(N);
 	
-	vec3 c= vec3(0);
+	vec3 c= alb * ambient;
 	
-	//reflection
+	//fresnel reflection, viewspace, non environmental
 	vec3 rfl= reflect(V,N);
-	float FR0= abs(1-rfl.z);
-	float FR1= FR0*FR0;
-		
-	vec3 R= P;
-	float a= 1.;
+	float FR= sat(rfl.z);//fresnel
+	//DBREAK(vec3(FR))
 	
+	vec3 Rp= Pm;//ray pos
+	vec3 Rd= Vm;//ray dir
+	//reflaction operates in worldspace
+	float a= 1.;
 	count(bounces){
 		//refraction
-		vec3 rfr= refract(V,N,IOR);
-		if( sum(rfr)==0. )
-			c+= alb * ambient * a;
-		else
-			c+= alb * env(rfr) * a;
+		Rd= refract(V,N,IOR);
+		if( sum(Rd)==0. )
+			Rd= reflect(V,N);
+		Rd= norm(Rd);
+		//c+= alb * env(Rd) * a;
 			
-		//heuristic
-		N= N+ distr(nseN(N+time*.05));
-		N= norm(N);
-		R+= (rfr+N)*a*.5;
-		
-		a*= .9;
+		//heuristic brdf
+		Rp+= Rd*N;
+		//R+= N*a*.5;
+		N= nseN(Rp);
+
+		a*= .8;
 	}
 	c/= float(bounces);
 	
-	c+= reflective*FR0 + (reflective/2+.5)*FR1;//fresnel with half-white factor
+	FR*=sqrt(FR);//**1.5
+	float FRw= FR*FR;
+	c+= FR *reflective*FRm;//fresnel albedo
+	c+= FRw*.8;//fresnel white
 
-	c*= 2.;
-	c*= 1.-(1./(1.+pow(maxv(c),.5)));
+	c*= 1.;
+	//c*= 1.-(1./(1.+maxv(c)));//rheinhard
 
 	#ifdef OPAQUE
 		a= 1.;
