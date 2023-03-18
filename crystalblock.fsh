@@ -4,7 +4,7 @@
 //#define DEBUG_NORMAL
 
 
-
+#define OPAQUE 1
 
 smooth in vec4 vertexColor;
 smooth in vec2 texCoord0;
@@ -16,13 +16,15 @@ out vec4 fragColor;
 
 
 layout(location=2) uniform float time;
-layout(location=3) uniform vec3 ambient;//=      vec3(1.0, 1.0, 5.)/255.;
-layout(location=4) uniform vec3 reflective;//=   vec3(0.1, 0.6, 1.)*1.;
-layout(location=5) uniform vec3 transmissive;//= vec3(0.8, 1.0, 1.)*.8;
-layout(location=6) uniform float rough;//= .5;
-layout(location=7) uniform float IOR;//= 1.1;
+layout(location=3) uniform vec3 ambient;
+layout(location=4) uniform vec3 reflective;
+layout(location=5) uniform vec3 albedo;
+layout(location=6) uniform float rough;
+layout(location=7) uniform float IOR;
 
-const int bounces= 3;
+layout(location=8) uniform sampler2D tex0;
+
+const int bounces= 4;
 
 
 //layout(location=0) smooth in vec3 v_Nm;
@@ -33,10 +35,10 @@ const int bounces= 3;
 
 
 vec3 env(vec3 V){
-	V = V*V;
+	V= abs(V);
+	V = V*V*V;
 	//V+= V*V;
-	V/= 4;
-	float l= sum(V)/3.;
+	float l= sum(V)/3;
 	return vec3(l);
 }
 
@@ -59,6 +61,7 @@ alpha channel
 
 output emis not premultiplied
 */
+/*
 void fsurf(
 	in vec2 uv,
 	inout vec3 N,
@@ -83,7 +86,9 @@ void fsurf(
 	}
 
 }
+*/
 
+#define distr(x) exp( -x*x * rough)
 
 void main(){
 	vec4  C= vertexColor;
@@ -91,11 +96,12 @@ void main(){
 	vec3  N= norm(normal);//viewspace
 	vec3  P= pos;//modelspace
 
+	vec3 alb= tex(tex0, P.xz);
+	
 	const vec3 V= BLUE;//view vector
 
 	vec3 nse0= nseN( P );
-
-	N= lerp( N, nse0, rough);
+	N= N + distr(nse0);
 	
 	N= norm(N);
 	
@@ -103,6 +109,7 @@ void main(){
 	
 	//reflection
 	vec3 rfl= reflect(V,N);
+	float FR= abs(1-rfl.z);
 		
 	vec3 R= P;
 	float a= 1.;
@@ -111,24 +118,23 @@ void main(){
 		//refraction
 		vec3 rfr= refract(V,N,IOR);
 		if( sum(rfr)==0. )
-			c+= ambient * a;
+			c+= alb * ambient * a;
 		else
-			c+= 1.* env(R) * a;
+			c+= alb * env(rfr) * a;
 			
 		//heuristic
-		N= lerp(N,nseN(R),.8);
+		N= N+ distr(nseN(N+time*.05));
 		N= norm(N);
-		R+= (rfr+N)*.5;
+		R+= (rfr+N)*a*.5;
 		
-		//a*= transmissive;
-		a*= .8;
+		a*= .9;
 	}
 	c/= float(bounces);
 	
+	c+= reflective*FR + FR;//fresnel with uncolored (white) factor
 
-	
-	c+= env(rfl) * reflective;
-
+	c*= 2.;
+	c*= 1.-(1./(1.+pow(maxv(c),.5)));
 
 	#ifdef OPAQUE
 		a= 1.;
@@ -144,7 +150,6 @@ void main(){
 		c= Nv*.5+.5;
 	#endif
 
-	c= 1.-1./(1.5-pows(c,2.));
 
 	fragColor = vec4(c,a);
 }

@@ -53,7 +53,7 @@ def load(file):
 		t_i=[]
 		n_i=[]
 		l= [ _.split('/') for _ in l ]
-		for w in l:#face vertex-data 'i/j/k'
+		for w in l:#face vertex-data
 			assert(len(l)==4)
 			vi= int(w[0])
 			ti=0
