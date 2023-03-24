@@ -29,7 +29,8 @@ layout(location=8) uniform float FRm;//fresnel magnitude
 
 uniform sampler2D tex0;
 
-const int bounces= 3;
+const int bounces= 6;
+const float TRANSMITTANCE= .88;//~.82 consistently magical, idfk why
 
 
 //layout(location=0) smooth in vec3 v_Nm;
@@ -39,15 +40,17 @@ const int bounces= 3;
 //layout(location=4) smooth in vec4 Pp;
 
 vec3 env(vec3 V){
-	V = V*V*.5;
-	V+= V*V;
-	float l= sum(V)/3;
+	V = V*V;
+	V= lerp(V,V*V,.9);
+	float l= sum(V);
 	return vec3(l);
 }
 
+#define GAUSS(x) exp(-x*x*rough)
+
 vec3 nseN(vec3 v){
 	v= floor((v+.25)*4.);
-	return rand33(v)*2.-1.;
+	return GAUSS(rand33(v));
 }
 vec3 nseUV(vec2 uv){
 	float a= dot(tex(tex0,uv).rgb,vec3(.3,.55,.15));//luminance
@@ -66,17 +69,19 @@ void main(){
 	vec3  N= norm(normal);//viewspace
 	vec3 N0= N;
 
+	//DBREAK(env(N));
+
 	vec3 alb= 
-		//tex(tex0, UV).rgb;
-		albedo;
+		unsrgb(tex(tex0, UV).rgb);
+		//albedo;
 	//DBREAK(alb)
 	
 	const vec3 V= BLUE;//view vector
 
 	vec3 nse0=
-		//nseN( P );
-		nseUV(UV)*rough;
-	//DBREAK(nmapu(nse0))
+		//nseN( Pm )*rough;
+		nmaps(GAUSS(nseUV(UV)))*.5;
+	//DBREAK(abs(nse0))
 
 	N= N + nse0;
 	N= norm(N);
@@ -88,34 +93,65 @@ void main(){
 	float FR= sat(rfl.z);//fresnel
 	//DBREAK(vec3(FR))
 	
-	vec3 Rp= Pm;//ray pos
+	vec3 Rp= Pm*.125;//ray pos
 	vec3 Rd= Vm;//ray dir
-	//reflaction operates in worldspace
+	//reflaction operates in worldspace, except when dont
 	float a= 1.;
 	count(bounces){
-		//refraction
-		Rd= refract(V,N,IOR);
-		if( sum(Rd)==0. )
+		Rd= refract(abs(Rd),N,2.2);
+		if( sum(Rd)==0. ){
 			Rd= reflect(V,N);
+			c+= ambient;
+		}
+		else
+			c+= alb * env(Rd) * a;
 		Rd= norm(Rd);
-		//c+= alb * env(Rd) * a;
+
+		//DBREAK(abs(Rd))
 			
 		//heuristic brdf
-		Rp+= Rd*N;
-		//R+= N*a*.5;
-		N= nseN(Rp);
+		//#define A 1
+		#ifdef A
+			Rp+= Rd*N;
+			Rd+= N*a*.25;
+			N+= nseN(Rd);
+			N= norm(N);
+		#else
+	    	//Rp+= Rd*.05;
+	    	//Rp+=  N*.125;
+	    	//N+=nseN(Rd)*.2;
+	    	//N= norm(N);
 
-		a*= .8;
+			N+= nseN(Rp)*.5;
+			N= norm(N);
+			Rp+= (Rd+N)*(a);//heuristic ramp;
+	    #endif
+	   	//DBREAK(abs(Rp))
+	   	//DBREAK(abs(Rd))
+
+		a*= TRANSMITTANCE;
 	}
-	c/= float(bounces);
+	//DBREAK(abs(norm(Rd)))
+
+	float amag= 1;
+	float asum= 0;//known't analytic integral
+	count(bounces){
+		asum+= amag;
+		amag*= TRANSMITTANCE;
+	}
+	c/= asum;
 	
-	FR*=sqrt(FR);//**1.5
+	FR*=sqrt(FR)*FRm;//**1.5
 	float FRw= FR*FR;
 	c+= FR *reflective*FRm;//fresnel albedo
 	c+= FRw*.8;//fresnel white
 
-	c*= 1.;
-	//c*= 1.-(1./(1.+maxv(c)));//rheinhard
+	c*= 3.;
+	c*= 1.-(1./(1.+c));//rheinhard
+	//c= norm(c)/max(1,maxv(c));//hue desat
+	const float GAMMA= .9;
+	c= pows(c,GAMMA);
+	#define SRGB 1//srgb framebuffer is a fuck???
 
 	#ifdef OPAQUE
 		a= 1.;

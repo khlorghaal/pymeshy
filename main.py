@@ -76,7 +76,7 @@ tex= glGenTextures(1)
 glBindTexture(GL_TEXTURE_2D, tex);
 glActiveTexture(GL_TEXTURE0)
 MIPS= 4
-glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA8, img_w,img_h)#memory uninitialized, inits mipmap level range
+glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_SRGB8, img_w,img_h)#memory uninitialized, inits mipmap level range
 glTexSubImage2D(GL_TEXTURE_2D, 0,0,0, img_w,img_h, GL_RGBA, GL_UNSIGNED_BYTE, img_rast)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
@@ -148,9 +148,9 @@ def render():
 	glUniform1f(2, time) #time
 	glUniform3f(3, 0.05,0.05,0.05)#ambient
 	glUniform3f(4, 0.1  ,0.6  ,1.  )#reflective
-	glUniform3f(5, 0.6  , .75 ,0.85)#albedo
-	glUniform1f(6, .2 ) #rough
-	glUniform1f(7, 1.45) #IOR
+	glUniform3f(5, 0.7  , .85 ,0.95)#albedo
+	glUniform1f(6, .25 ) #rough
+	glUniform1f(7, 1.2) #IOR
 	glUniform1f(8, .4) #fresnel magnitude
 
 	glDisable(GL_BLEND)
