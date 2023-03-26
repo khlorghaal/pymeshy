@@ -88,9 +88,9 @@ prog= None
 def loadprog():
 	with open("com.glsl") as f:
 		com= f.read()
-	with open("crystalblock.vsh") as f:
+	with open("panopticube.vsh") as f:
 		vsh_src= f.read()
-	with open("crystalblock.fsh") as f:
+	with open("panopticube.fsh") as f:
 		fsh_src= f.read()
 	try:
 		pp= lambda f,D: ''.join([
@@ -121,7 +121,7 @@ def loadprog():
 		return
 
 import obj
-mesh= obj.load('caveblocks.obj')
+mesh= obj.load('cube_uvn.obj')
 
 
 
@@ -140,18 +140,18 @@ def render():
 	glUseProgram(prog)
 
 	vm= view.do()
-	view.m[0]+= .00025
+	view.m[0]+= .000269
 	mmv= vm.v
 	mp=  vm.p
 	glUniformMatrix4fv(0,1,True,mmv)
 	glUniformMatrix4fv(1,1,True,mp)
 	glUniform1f(2, time) #time
 	glUniform3f(3, 0.05,0.05,0.05)#ambient
-	glUniform3f(4, 0.1  ,0.6  ,1.  )#reflective
-	glUniform3f(5, 0.7  , .85 ,0.95)#albedo
+	glUniform3f(4, 0.1 ,0.6 ,1.  )#reflective
+	glUniform3f(5, 0.7 , .85,0.95)#albedo
 	glUniform1f(6, .25 ) #rough
 	glUniform1f(7, 1.2) #IOR
-	glUniform1f(8, .4) #fresnel magnitude
+	glUniform1f(8, .3) #fresnel magnitude
 
 	glDisable(GL_BLEND)
 

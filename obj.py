@@ -26,6 +26,8 @@ def load(file):
 			'f' : f,
 			'o' : [],
 			'm' : [],
+			'mtllib' : [],
+			'usemtl' : [],
 			's' : []
 		}[ l[0] ]+=[ l[1:] ]
 

@@ -33,11 +33,12 @@ const int bounces= 6;
 const float TRANSMITTANCE= .88;//~.82 consistently magical, idfk why
 
 
-//layout(location=0) smooth in vec3 v_Nm;
-//layout(location=1) smooth in vec3 v_Nv;
-//layout(location=2) smooth in vec3 Pm;
-//layout(location=3) smooth in vec3 Pv;
-//layout(location=4) smooth in vec4 Pp;
+vec3 reinhard(vec3 c, float e){
+	float l = maxv(c);
+	float l1= l*(1+(l/(e*e)))/(1+l);
+	return c*(l1/l);
+}
+
 
 vec3 env(vec3 V){
 	V = V*V;
@@ -70,6 +71,7 @@ void main(){
 	vec3 N0= N;
 
 	//DBREAK(env(N));
+	//DBREAK(abs(N));
 
 	vec3 alb= 
 		unsrgb(tex(tex0, UV).rgb);
@@ -80,7 +82,7 @@ void main(){
 
 	vec3 nse0=
 		//nseN( Pm )*rough;
-		nmaps(GAUSS(nseUV(UV)))*.5;
+		nmaps(GAUSS(nseUV(UV)))*.25;
 	//DBREAK(abs(nse0))
 
 	N= N + nse0;
@@ -93,10 +95,12 @@ void main(){
 	float FR= sat(rfl.z);//fresnel
 	//DBREAK(vec3(FR))
 	
+
+	float a= 1.;
+	/*
 	vec3 Rp= Pm*.125;//ray pos
 	vec3 Rd= Vm;//ray dir
 	//reflaction operates in worldspace, except when dont
-	float a= 1.;
 	count(bounces){
 		Rd= refract(abs(Rd),N,2.2);
 		if( sum(Rd)==0. ){
@@ -140,18 +144,22 @@ void main(){
 		amag*= TRANSMITTANCE;
 	}
 	c/= asum;
+	*/
 	
-	FR*=sqrt(FR)*FRm;//**1.5
-	float FRw= FR*FR;
-	c+= FR *reflective*FRm;//fresnel albedo
-	c+= FRw*.8;//fresnel white
+	c+= alb;
 
-	c*= 3.;
-	c*= 1.-(1./(1.+c));//rheinhard
-	//c= norm(c)/max(1,maxv(c));//hue desat
-	const float GAMMA= .9;
-	c= pows(c,GAMMA);
-	#define SRGB 1//srgb framebuffer is a fuck???
+	//FR*= FR)*FRm;//**1.5
+	FR*= FR*FR*FR;//rampage
+	float FRw= FR*FR*FR;
+	FR *= FRm;
+	FRw*= FRm;
+	//c+= reflective*FR;//fresnel albedo
+	//c+= vec3(FRw);//fresnel white
+
+	c= reinhard(c*1.,1.2);
+	//const float GAMMA= 1.0;
+	//c= pows(c,GAMMA);
+	//#define SRGB 1//srgb framebuffer is a fuck???
 
 	#ifdef OPAQUE
 		a= 1.;

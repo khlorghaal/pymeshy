@@ -49,5 +49,5 @@ void main() {
 
     texCoord0*= .4;
 
-    Vm= mat3(ModelViewMat)*BLUE;
+    Vm= transpose(ModelViewMat)[2].xyz;
 }
