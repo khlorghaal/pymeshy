@@ -27,10 +27,9 @@ from dataclasses import dataclass
 
 @dataclass
 class state:
-    m= [400,400]
+    m= [0,0]
     z= -15
-    def do(s):
-        return do(s)
+    def do(*a): return do(*a)
 
 @dataclass
 class mats:
@@ -38,18 +37,19 @@ class mats:
     p: array
 
 
-def do(state):
+def do(state,w,h):
     v= identity(3,dtype='float')#view
     p= identity(4,dtype='float')#projection
     m= state.m
     z= state.z
+    asp= h/w
 
     x= m[0]*6.28
     y= m[1]*3.14
     v= matmul(roty(y),rotx(x))*exp(z*.25)
     fov= .2
     p= array([
-        [1,0,  0, 0],
+        [asp,0,  0, 0],
         [0,1,  0, 0],
         [0,0,fov, 0],
         [0,0,fov, 1]

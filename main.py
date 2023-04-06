@@ -22,7 +22,7 @@ except Exception as e:
 
 #w= 2560
 #h= 1440
-w,h= (int(2560//2),1440)#dev
+w,h= (int(2560//3),1440//2)#dev
 #w,h= (2560,1440)
 #w,h= (3840,2160)#4k
 #w,h= (9075,6201)#poster
@@ -139,8 +139,8 @@ def render():
 
 	glUseProgram(prog)
 
-	vm= view.do()
-	view.m[0]+= .000269
+	vm= view.do(w,h)
+	#view.m[0]+= .000269
 	mmv= vm.v
 	mp=  vm.p
 	glUniformMatrix4fv(0,1,True,mmv)
@@ -177,7 +177,7 @@ if ANIM:
 			time= perf_counter()-appstart
 			frame+=1
 			sleep(1./60.)
-			if frame%8==0: #recompile all the time lmao
+			if frame%30==0: #recompile all the time lmao
 				#todo file modify hook
 				try:
 					loadprog()

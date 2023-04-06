@@ -39,6 +39,112 @@ vec3 reinhard(vec3 c, float e){
 	return c*(l1/l);
 }
 
+float sdbox(vec2 p){
+	return maxv(abs(p-.5));
+}
+
+//@fabrice fork
+vec3 hilbert(vec2 U){
+    vec2 P= vec2(.5);
+    const vec2 X=vec2(1,0);
+    const vec2 Y=vec2(0,1);
+    vec2 l=-X;
+    vec2 r=-X;
+
+
+    #define swap(T,a,b){ T t= a; a=b; b=t; }
+    
+    const int N_H= 3;
+    vec2 fU;
+    bvec2 c;
+    float d;
+    vec3 acc= vec3(0);
+    vec2 U0= U;
+    vec2 D;
+    count(N_H){
+    	vec2 fC= step(.5,U);
+        c= bvec2(fC);// select child
+
+        vec2 dU= U;
+        U= 2.*U- fC; // go to new local frame
+        //dU= dU-U- fC;
+        //acc+= vec3(0,dU);//color
+
+        l=  c.x? c.y ? -Y :-X
+               : c.y ?  l : Y;
+        r= (c.x==c.y)?  X 
+        	   : c.y ? -Y : Y;
+
+       	//if(n==0){
+   	    //	acc= vec3(0.,c);
+   	    //}
+
+       	if(n==2){
+   	       	if(!c.y || !c.x)
+   	       		if(c.x)
+   	       			acc+= GREEN;
+   	       		else
+   	       			acc+= RED;
+   	       	else
+   	       		if(c.x)
+   	       			acc+= CYAN;
+   	       		else
+   	       			acc+= BLUE;
+   	    }
+   	    //float bb= sat(sdbox(U)*32.-13.);
+        //if(n==1){
+        //	//acc= vec3(bb)*.2;
+       	//    acc+= vec3(l.g, 0,0)*(1-bb)*.5;
+       	//    acc+= vec3(  0,r.rg)*(1-bb)*.5;
+       	//    return acc;
+        //	acc*= 1-bb;
+       	//}
+        
+        if (c.x){// sym
+        	U.x = 1-U.x;  l.x=-l.x;  r.x=-r.x;  swap(vec2,r,l); }
+        if (c.y){// rot+sym
+        	U   = 1-U.yx; l  =-l.yx; r  =-r.yx; }
+
+        dU= dU-U;
+
+        //float S;
+		//if(n==2){
+       	//if(c.x)
+       	//	if(!c.y){
+       	//		S=  -dU.x +1.5
+       	//		  + -dU.y;}
+       	//	else{
+       	//		S=  -dU.y +2.5
+       	//		  + -dU.x;}
+       	//else
+       	//	if(!c.y){
+       	//		S=  dU.y +1.
+       	//		   -dU.x;}
+       	//	else{
+       	//		S= -dU.x 
+       	//		  + dU.y;}}
+	    //acc+= vec3(S/4)*exp2(-n); //lum
+	    //acc+= vec3(0,D)*exp2(-n); //colored
+
+        //acc *= 2.5;//max octave amp
+        //acc*= .075;//min octave amp
+    }
+    //acc= vec3(sum(abs(U0-U)))*.5;
+
+    //acc= norm(abs(acc));
+
+    //return WHITE*acc= norm(acc);
+    //return WHITE*len(acc)*.5;
+    //return len(acc);
+
+    vec2 dUP= U-P;
+    #define rd(v) step(.0,v)
+    #define plot(q) \
+    ( rd(dot(dUP,q)) * .002/abs( dot( dUP, vec2(-q.y,q.x) )) )
+    //( dot(dUP,l) < 0. ?  0: .0125/abs( dot( dUP, vec2(-l.y,l.x) )) )
+    acc*= .5+vec3(plot(l)+plot(r))*.5;
+	return acc;
+}
 
 vec3 env(vec3 V){
 	V = V*V;
@@ -61,6 +167,18 @@ vec3 nseUV(vec2 uv){
 	return norm(exp(-b*a*a));
 }
 
+vec3 fresnel(vec3 R){
+	float a= R.z;
+	a*= a*a*a;//ramp
+	float w= a*a*a;//white component, narrower angle
+	a*= FRm;//magnitude
+	w*= FRm;
+	vec3 c;
+	c+= a*reflective;//albedo
+	c+= w;//white
+	return c;
+}
+
 
 #define DBREAK(c) fragColor= vec4(vec3(c),1); return;
 
@@ -74,9 +192,21 @@ void main(){
 	//DBREAK(abs(N));
 
 	vec3 alb= 
-		unsrgb(tex(tex0, UV).rgb);
-		//albedo;
+		//unsrgb(tex(tex0, UV).rgb);
+		srgb(albedo);
 	//DBREAK(alb)
+
+	DBREAK(hilbert(UV))
+		/*
+	//alb*= hilbert2(UV);
+	float hc;
+	float h= float(hilbert2(32,nmapu(UV)*32.,hc));
+	//DBREAK(vec3(hc,vec2(.25*log2(h*.05))));
+	// DBREAK(fract(h/(fract(time/16)*4))); //fract of hilbert length causes peculiar alignments
+	float T= fract((time*3.)/32.)*32;
+	DBREAK(hc*fract(h/T));
+	//DBREAK(1.-exp(-h*.001));
+	//DBREAK(vec3(0,UV));*/
 	
 	const vec3 V= BLUE;//view vector
 
@@ -92,7 +222,7 @@ void main(){
 	
 	//fresnel reflection, viewspace, non environmental
 	vec3 rfl= reflect(V,N);
-	float FR= sat(rfl.z);//fresnel
+	vec3 FR= fresnel(rfl);//color
 	//DBREAK(vec3(FR))
 	
 
@@ -148,15 +278,9 @@ void main(){
 	
 	c+= alb;
 
-	//FR*= FR)*FRm;//**1.5
-	FR*= FR*FR*FR;//rampage
-	float FRw= FR*FR*FR;
-	FR *= FRm;
-	FRw*= FRm;
-	//c+= reflective*FR;//fresnel albedo
-	//c+= vec3(FRw);//fresnel white
+	c+= FR;
 
-	c= reinhard(c*1.,1.2);
+	c= reinhard(c*1.,1.5);
 	//const float GAMMA= 1.0;
 	//c= pows(c,GAMMA);
 	//#define SRGB 1//srgb framebuffer is a fuck???

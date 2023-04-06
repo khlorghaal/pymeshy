@@ -26,7 +26,7 @@ vec3 snap_axis(vec3 v){
 }
 
 void main() {
-    Pm= Position*16;
+    Pm= Position;
     Pv= mat3(ModelViewMat)*Pm;
     gl_Position = ProjMat*vec4(Pv, 1);
     //should premultipy mats, but that would violate rig interface
@@ -40,14 +40,12 @@ void main() {
     //normal = N;
     normal = norm((ModelViewMat * vec4(N,0) ).rgb);
 
-    if(     N.x!=0.)
-      texCoord0= Pm.yz;
-    else if(N.y!=0.)
-      texCoord0= Pm.xz;
-    else if(N.z!=0.)
-      texCoord0= Pm.xy;
-
-    texCoord0*= .4;
+    vec2 uv;
+    if(     N.x!=0.) uv= Pm.yz;
+    else if(N.y!=0.) uv= Pm.xz;
+    else if(N.z!=0.) uv= Pm.xy;
+    uv= nmapu(uv);
+    texCoord0= uv;
 
     Vm= transpose(ModelViewMat)[2].xyz;
 }
