@@ -18,6 +18,7 @@ smooth out vec3 normal;
 smooth out vec3 Pm;//position modelspace
 smooth out vec3 Pv;//position viewspace
 smooth out vec3 Vm;//viewvector modelspace
+//modelspace is basically worldspace in this instance
 
 vec3 snap_axis(vec3 v){  
   vec3 av= abs(v);
@@ -28,6 +29,7 @@ vec3 snap_axis(vec3 v){
 void main() {
     Pm= Position;
     Pv= mat3(ModelViewMat)*Pm;
+    Vm= (transpose(ModelViewMat)*vec4(Pm,-1.)).xyz;//incorrect but okay
     gl_Position = ProjMat*vec4(Pv, 1);
     //should premultipy mats, but that would violate rig interface
     //rig format precedes badness
@@ -47,5 +49,4 @@ void main() {
     uv= nmapu(uv);
     texCoord0= uv;
 
-    Vm= transpose(ModelViewMat)[2].xyz;
 }

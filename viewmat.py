@@ -51,7 +51,7 @@ def do(state,w,h):
     p= array([
         [asp,0,  0, 0],
         [0,1,  0, 0],
-        [0,0,fov, 0],
+        [0,0,2**-11, 0],
         [0,0,fov, 1]
         ])
     v= pad(v,(0,1),mode='constant',constant_values=0)

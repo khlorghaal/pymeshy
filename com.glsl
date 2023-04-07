@@ -116,7 +116,9 @@ vec4 nmapu(vec4 x){ return x*.5+.5; }
 
 //[0,1]
 float saw(float x){ return mod(x,1.); }
-float tri(float x){ return abs( mod(x,2.) -1.); }
+vec1 tri(vec1 x){ return abs( mod (x,2.) -1.); }
+vec2 tri(vec2 x){ return abs( mods(x,2.) -1.); }
+vec3 tri(vec3 x){ return abs( mods(x,2.) -1.); }
   int tri(int x, int a){ return abs( abs(x%(a*2))-a ); }
 
 float sum ( vec2 v){ return dot(v,vec2(1));}

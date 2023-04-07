@@ -140,7 +140,7 @@ def render():
 	glUseProgram(prog)
 
 	vm= view.do(w,h)
-	#view.m[0]+= .000269
+	view.m[0]+= .000269
 	mmv= vm.v
 	mp=  vm.p
 	glUniformMatrix4fv(0,1,True,mmv)
