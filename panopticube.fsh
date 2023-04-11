@@ -1,6 +1,7 @@
 //BSD license
 //author khlorghaal
 
+#define DEBUG
 //#define DEBUG_NORMAL
 
 
@@ -29,8 +30,8 @@ layout(location=8) uniform float FRm;//fresnel magnitude
 
 uniform sampler2D tex0;
 
-const int bounces= 4;
-const float TRANSMITTANCE= .75;//~.82 consistently magical, idfk why
+const int bounces= 7;
+const float TRANSMITTANCE= .85;//~.82 consistently magical, idfk why
 
 
 vec3 reinhard(vec3 c, float e){
@@ -50,7 +51,7 @@ vec3 env(vec3 V){
 #define GAUSS(x) exp(-x*x)
 
 vec3 nseN(vec3 v){
-	v= floor((v+.25)*4.);
+	v= floor((v+.125)*8.);
 	return GAUSS(rand33(v));
 }
 vec3 nseUV(vec2 uv){
@@ -73,6 +74,75 @@ vec3 fresnel(vec3 R){
 	return c;
 }
 
+vec4 reflact(vec3 R, vec3 N){
+    vec3 ra= norm(R);
+    vec3 rc= R*1.;
+    ra= -abs(ra);
+    rc= -abs(rc);
+    //return abs(rc);
+    
+    //float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
+    float ior= 1.5;
+    float iorrcp= 1./ior;
+    
+	vec3 p= rc;//position+near
+	vec3 v= norm(ra);//march velocity
+	vec3 a= BLACK;//accumulator
+	//N= vec3(ETA);//normal
+    ass(real(p+v+a+ra+rc),RED);
+	float m= 1.;// magnitude | final alpha
+    count(bounces){
+		//march
+		vec3 sv= sign(v);
+		vec3 ef= floor(p);
+		vec3 e= ef+step(vec3(0.), sv);//next edges
+		
+		vec3 dp= e-p;//delta position to each next-edge
+		vec3 edt= dp/nozero(v);//time to each edge
+		float dt= minv(edt);//time to soonest edge
+        ass(dt>=0.,ORANGE);//assert no negative time
+
+
+    	vec3 rfr= refract(v,N, iorrcp);
+		vec3 rfl= reflect(v,-N);
+		if(eqf(maxv(rfr),0.) || !real(rfr) )
+            rfr= rfl;
+        v= rfr+rfl*1.5;
+
+        //vec3 rho= rand13(sum(p));
+		//v+= 1.-GAUSS( rho*rough*.42 );
+
+		v= norm(v);
+  
+        dp= v*(dt+ETA*8.);//if very precisely into an edge, may diagonal leap, dependent on eta
+        p+= dp;
+        N= ef-ceil(p);
+        N= norm(N);
+
+        //brdf
+        vec3 C= abs(N);
+        vec3 c= 
+              C.x*RED
+            + C.y*GREEN
+            + C.z*BLUE;
+        const float h= .420;
+        float l= sat(maxv(abs(dp))-h);
+        c*= l;
+        //c= vec3(lum(c));
+
+        a+= c*m;
+        m*= TRANSMITTANCE;
+      
+	}
+
+    float cnorm= 1.;///(1.-pow(1.-TRANSMITTANCE,float(maxb)));
+    //empirical luminance normalization
+    //meaning i have no fucking clue how it do
+    
+    //return vec4(abs(N),m);
+    return vec4(a,m);
+}
+
 
 #define DBREAK(c) fragColor= vec4(vec3(c),1); return;
 
@@ -84,6 +154,7 @@ void main(){
 
 	//DBREAK(env(N));
 	//DBREAK(abs(N));
+	//DBREAK(abs(Vm));
 
 	vec3 alb= 
 		unsrgb(tex(tex0, UV).rgb);
@@ -105,8 +176,8 @@ void main(){
 	const vec3 V= BLUE;//view vector
 
 	vec3 nse0=
-		//nseN( Pm )*rough;
-		nseUV(UV)*rough*.01;
+		nseN( Pm )*rough;
+		//nseUV(UV)*rough;
 	//DBREAK(abs(nse0))
 
 	N= N + nse0;
@@ -114,7 +185,7 @@ void main(){
 	
     //alb= vec3(tri( lum(nse0)*80.5 + time*.2 )*.9+.1);
 
-	vec3 c= alb;
+	vec3 c= BLACK;
 
 	vec3 emi= alb*vec3(lum(((tri( (alb)*32. + time*.65 )))));
 	emi*= sat(abs(dot(V,N))*1.25+.25);//slight directional lobe
@@ -129,55 +200,19 @@ void main(){
 	vec3 rfl= reflect(V,N);
 	vec3 FR= fresnel(rfl);//color
 	//DBREAK(vec3(FR))
-	
-	//DBREAK(vec3(abs(norm(Pv))));
 
-	c= WHITE*.1;
+	//c= WHITE/16;
 	float a= 1.;
-	//reflaction operates in worldspace
-	vec3 Rd= norm(Pm);//ray dir
-	vec3 Rp= Vm;//ray pos
-	//DBREAK(abs(Rp));
-	count(bounces){
-		Rd= refract(Rd,N,1.5);
-		if( sum(Rd)==0. ){
-			Rd= reflect(V,N);
-			c+= ambient;
-		}
-		else
-			c+= env(Rd) * a;
+	vec4 rfr= reflact(Vm, N);
+	//DBREAK(rfr.rgb);
+	a= rfr.a;
+	c+= rfr.rgb;
 
-		//heuristic brdf
-		Rp+= Rd;
-		N= sign(Rd)+Rp*.125;
-		//Rp+= (Rd*N)*1.;
-
-		N+= Rp*1.;
-		N = norm(N);
-		Rp+= (Rd*N)*1.;
-		Rd= norm(Rd);
-	   	//DBREAK(abs(Rp))
-	   	//DBREAK(abs(Rd))
-
-
-		a*= TRANSMITTANCE;
-	}
-	//DBREAK(fresnel(Rp));
-	//DBREAK(abs(norm(Rd)));
-	//DBREAK(abs(norm(Rp)))
-	DBREAK(abs(N));
-
-	float amag= 1;
-	float asum= 0;//known't analytic integral
-	count(bounces){
-		asum+= amag;
-		amag*= TRANSMITTANCE;
-	}
-	c/= asum;
+	//c+= env(rfl)*.2;
 	
 	c+= FR;
 
-	c= reinhard(c*1.,1.25);
+	c= reinhard(c*1.2,.8);
 	//const float GAMMA= 1.0;
 	//c= pows(c,GAMMA);
 	//#define SRGB 1//srgb framebuffer is a fuck???

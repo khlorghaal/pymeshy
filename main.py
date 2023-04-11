@@ -140,7 +140,8 @@ def render():
 	glUseProgram(prog)
 
 	vm= view.do(w,h)
-	view.m[0]+= .000269
+	view.m[0]+= .00269
+	view.m[1]+= .0039
 	mmv= vm.v
 	mp=  vm.p
 	glUniformMatrix4fv(0,1,True,mmv)
@@ -151,7 +152,7 @@ def render():
 	glUniform3f(5, 0.7 , .85,0.95)#albedo
 	glUniform1f(6, .25 ) #rough
 	glUniform1f(7, 1.2) #IOR
-	glUniform1f(8, .3) #fresnel magnitude
+	glUniform1f(8, .4) #fresnel magnitude
 
 	glDisable(GL_BLEND)
 

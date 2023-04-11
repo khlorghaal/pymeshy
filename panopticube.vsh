@@ -29,8 +29,10 @@ vec3 snap_axis(vec3 v){
 void main() {
     Pm= Position;
     Pv= mat3(ModelViewMat)*Pm;
-    Vm= (transpose(ModelViewMat)*vec4(Pm,-1.)).xyz;//incorrect but okay
-    gl_Position = ProjMat*vec4(Pv, 1);
+    vec4 Pp= ProjMat*vec4(Pv, 1);
+    gl_Position= Pp;
+    Vm= (transpose(ModelViewMat)*vec4(Pp.xy/Pp.w,1,-1)).xyz;//flawed
+
     //should premultipy mats, but that would violate rig interface
     //rig format precedes badness
     

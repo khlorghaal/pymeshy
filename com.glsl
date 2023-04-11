@@ -539,10 +539,12 @@ int cbrti(int x){return int( pow(float(x),1./3.));}
 
 //#define DEBUG
 #ifdef DEBUG
-    vec3 _err= vec3(0.);
+    vec3 _err= BLACK;
     #define ass(pred,color) \
         if(!(pred)){ _err= color; return color; }
+    #define checkD { if(_err==BLACK){ fragColor= _err; return; }} 
 #else
     #define ass(_,__) void;
+    #define checkD    void;
 #endif
 
