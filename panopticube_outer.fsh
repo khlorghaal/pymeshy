@@ -5,7 +5,7 @@
 //#define DEBUG_NORMAL
 
 
-#define OPAQUE 1
+//#define OPAQUE 1
 
 #define TEXTURE_NOISE 1
 
@@ -30,8 +30,13 @@ layout(location=8) uniform float FRm;//fresnel magnitude
 
 uniform sampler2D tex0;
 
-const int bounces= 7;
-const float TRANSMITTANCE= .85;//~.82 consistently magical, idfk why
+
+const vec3 col_x= vec3(.75,.125,0)*1.;
+const vec3 col_y= vec3(0,.75,.125)*1.;
+const vec3 col_z= vec3(.125,0,.75)*1.;
+
+const int bounces= 2;
+const float TRANSMITTANCE= .82;//~.82 consistently magical, idfk why
 
 
 vec3 reinhard(vec3 c, float e){
@@ -40,27 +45,26 @@ vec3 reinhard(vec3 c, float e){
 	return c*(l1/l);
 }
 
-
-vec3 env(vec3 V){
-	V = V*V;
-	V= lerp(V,V*V,.9);
-	float l= sum(V);
-	return vec3(l);
-}
+//vec3 env(vec3 V){
+//	V = V*V;
+//	//V= lerp(V,V*V,.99);
+//	float l= sum(V);
+//	return vec3(l);
+//}
 
 #define GAUSS(x) exp(-x*x)
 
 vec3 nseN(vec3 v){
-	v= floor((v+.125)*8.);
+	v= floor(v*2);
 	return GAUSS(rand33(v));
 }
-vec3 nseUV(vec2 uv){
-	float a= dot(tex(tex0,uv).rgb,vec3(.3,.55,.15));//luminance
-	//a= sqrt(a);//contrast
-	uv= floor((uv+1./16)*16.);
-	vec3 b= rand23(uv);
-	return norm(exp(-b*a*a));
-}
+//vec3 nseUV(vec2 uv){
+//	float a= dot(tex(tex0,uv).rgb,vec3(.3,.55,.15));//luminance
+//	//a= sqrt(a);//contrast
+//	uv= floor((uv+1./16)*16.);
+//	vec3 b= rand23(uv);
+//	return norm(exp(-b*a*a));
+//}
 
 vec3 fresnel(vec3 R){
 	float a= R.z;
@@ -82,7 +86,7 @@ vec4 reflact(vec3 R, vec3 N){
     //return abs(rc);
     
     //float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
-    float ior= 1.5;
+    float ior= 2.5;
     float iorrcp= 1./ior;
     
 	vec3 p= rc;//position+near
@@ -104,7 +108,7 @@ vec4 reflact(vec3 R, vec3 N){
 
 
     	vec3 rfr= refract(v,N, iorrcp);
-		vec3 rfl= reflect(v,-N);
+		vec3 rfl= reflect(v,N);
 		if(eqf(maxv(rfr),0.) || !real(rfr) )
             rfr= rfl;
         v= rfr+rfl*1.5;
@@ -114,19 +118,19 @@ vec4 reflact(vec3 R, vec3 N){
 
 		v= norm(v);
   
-        dp= v*(dt+ETA*8.);//if very precisely into an edge, may diagonal leap, dependent on eta
+        dp= v*(dt+ETA*4.);//if very precisely into an edge, may diagonal leap, dependent on eta
         p+= dp;
         N= ef-ceil(p);
         N= norm(N);
 
         //brdf
-        vec3 C= abs(N);
+        vec3 C= abs(norm(N));
         vec3 c= 
-              C.x*RED
-            + C.y*GREEN
-            + C.z*BLUE;
+              C.x*col_x
+            + C.y*col_y
+            + C.z*col_z;
         const float h= .420;
-        float l= sat(maxv(abs(dp))-h);
+        float l= sat(len(dp)-h);
         c*= l;
         //c= vec3(lum(c));
 
@@ -152,82 +156,55 @@ void main(){
 	vec3  N= norm(normal);//viewspace
 	vec3 N0= N;
 
-	//DBREAK(env(N));
-	//DBREAK(abs(N));
-	//DBREAK(abs(Vm));
-
 	vec3 alb= 
 		unsrgb(tex(tex0, UV).rgb);
 		//srgb(albedo);
 	//DBREAK(alb)
 
-	//DBREAK(hilbert(UV))
-		/*
-	//alb*= hilbert2(UV);
-	float hc;
-	float h= float(hilbert2(32,nmapu(UV)*32.,hc));
-	//DBREAK(vec3(hc,vec2(.25*log2(h*.05))));
-	// DBREAK(fract(h/(fract(time/16)*4))); //fract of hilbert length causes peculiar alignments
-	float T= fract((time*3.)/32.)*32;
-	DBREAK(hc*fract(h/T));
-	//DBREAK(1.-exp(-h*.001));
-	//DBREAK(vec3(0,UV));*/
-	
 	const vec3 V= BLUE;//view vector
 
 	vec3 nse0=
 		nseN( Pm )*rough;
 		//nseUV(UV)*rough;
-	//DBREAK(abs(nse0))
 
 	N= N + nse0;
 	N= norm(N);
 	
     //alb= vec3(tri( lum(nse0)*80.5 + time*.2 )*.9+.1);
+	vec3 c= (CYAN+BLUE)*.05;
 
-	vec3 c= BLACK;
-
-	vec3 emi= alb*vec3(lum(((tri( (alb)*32. + time*.65 )))));
-	emi*= sat(abs(dot(V,N))*1.25+.25);//slight directional lobe
-	//DBREAK(emi);
-	float lemi= lum(emi);
-	lemi*= lemi;//hea isa braight ladde
+	vec3 emi= vec3(lum(((tri( (alb)*8. + time*2. )))));
+	emi*= sat(abs(dot(V,N))*1.5+.5);//slight directional lobe
+	float lemi= lum(emi);//hea isa braight ladde
+	lemi*= lemi;
 	emi*= lemi;
+	emi*= alb;
 	c+= emi;
 	//DBREAK(emi);
+	float a= lemi*.5+.5;
 	
 	//fresnel reflection, viewspace, non environmental
 	vec3 rfl= reflect(V,N);
 	vec3 FR= fresnel(rfl);//color
-	//DBREAK(vec3(FR))
 
 	//c= WHITE/16;
-	float a= 1.;
 	vec4 rfr= reflact(Vm, N);
 	//DBREAK(rfr.rgb);
-	a= rfr.a;
-	c+= rfr.rgb;
+	c+= rfr.rgb*.25;
+	//a*= rfr.a;//high alpha is less transmission => less alpha
 
 	//c+= env(rfl)*.2;
 	
 	c+= FR;
 
-	c= reinhard(c*1.2,.8);
+	c= reinhard(c*1.,1.25);
 	//const float GAMMA= 1.0;
 	//c= pows(c,GAMMA);
 	//#define SRGB 1//srgb framebuffer is a fuck???
-
-	#ifdef OPAQUE
-		a= 1.;
-	#else
-		a= 1.-a;//high alpha is less transmission => less alpha
-	#endif
 
 	#ifdef SRGB
 		c= srgb(c);
 	#endif
 	
-
-
 	fragColor = vec4(c,a);
 }

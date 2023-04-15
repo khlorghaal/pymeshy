@@ -44,11 +44,11 @@ void main() {
     //normal = N;
     normal = norm((ModelViewMat * vec4(N,0) ).rgb);
 
-    vec2 uv;
-    if(     N.x!=0.) uv= Pm.yz;
-    else if(N.y!=0.) uv= Pm.xz;
-    else if(N.z!=0.) uv= Pm.xy;
-    uv= nmapu(uv);
-    texCoord0= uv;
+    //vec2 uv;
+    //if(     N.x!=0.) uv= Pm.yz;
+    //else if(N.y!=0.) uv= Pm.xz;
+    //else if(N.z!=0.) uv= Pm.xy;
+    //uv= nmapu(uv);
+    texCoord0= UV0;
 
 }

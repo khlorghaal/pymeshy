@@ -28,7 +28,7 @@ from dataclasses import dataclass
 @dataclass
 class state:
     m= [0,0]
-    z= -15
+    z= -6
     def do(*a): return do(*a)
 
 @dataclass
