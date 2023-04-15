@@ -1,3 +1,2 @@
 __pycache__
-*.png
-*.exr
+*out.png
