@@ -40,7 +40,6 @@ from enum import unique
 from math import pi  as PI
 from math import tau as TAU
 PHI= (1+5**.5)/2
-TAU= 2*PI
 from math import exp
 from math import log2
 

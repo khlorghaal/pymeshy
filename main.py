@@ -3,6 +3,7 @@ from time import *
 from math import *
 
 ANIM= True
+DANCE= True
 frame=0# int #set manually if anim is off
 t= 0 #float seconds
 
@@ -145,7 +146,9 @@ glViewport(0,0,w,h)
 
 import viewmat
 view= viewmat.state()
-view.m[1]= -.2#initial rotation
+#view.m[1]= -.2#initial rotation
+view.m[0]= 3/8
+view.m[1]= 1/4.5
 
 def render():
 	glClearColor(0,0,0,0)
@@ -154,7 +157,7 @@ def render():
 	glUseProgram(prog_inner)
 
 	#dance
-	if ANIM:
+	if ANIM and DANCE:
 		view.m[0]+= sin(t* 6  )*.008  \
 				   +sin(t*  .6)*.005
 		view.m[1]+= cos(t*14  )*.015
@@ -168,7 +171,7 @@ def render():
 	glUniform3f(3, 0.05,0.05,0.05)#ambient
 	glUniform3f(4, 0.1 ,0.6 ,1.  )#reflective
 	glUniform3f(5, 0.7 , .85,0.95)#albedo
-	glUniform1f(6, .1 ) #rough
+	glUniform1f(6, .5 ) #rough
 	glUniform1f(7, 1.2) #IOR
 	glUniform1f(8, .4) #fresnel magnitude
 
@@ -184,21 +187,21 @@ def render():
 	mesh()
 
 	glUseProgram(prog_outer)
-	vm= view.do(w,h)#outer cube matrix
-	mmv[ 0]*= 1.75#fuck god forgive me 
-	mmv[ 1]*= 1.75
-	mmv[ 2]*= 1.75
-	mmv[ 4]*= 1.75
-	mmv[ 5]*= 1.75
-	mmv[ 6]*= 1.75
-	mmv[ 8]*= 1.75
-	mmv[ 9]*= 1.75
-	mmv[10]*= 1.75
+	vm= view.do(w,h)#outer cube
+	mmv[ 0]*= 1.5#fuck god forgive me 
+	mmv[ 1]*= 1.5
+	mmv[ 2]*= 1.5
+	mmv[ 4]*= 1.5
+	mmv[ 5]*= 1.5
+	mmv[ 6]*= 1.5
+	mmv[ 8]*= 1.5
+	mmv[ 9]*= 1.5
+	mmv[10]*= 1.5
 	glUniformMatrix4fv(0,1,True,mmv)
 	glUniformMatrix4fv(1,1,True,mp)
 	glUniform1f(2, t) #t
 	glUniform3f(3, 0.05,0.05,0.05)#ambient
-	glUniform3f(4, 0.1 ,0.6 ,1.  )#reflective
+	glUniform3f(4, 0.2 ,0.2 ,.2  )#reflective
 	glUniform3f(5, 0.7 , .85,0.95)#albedo
 	glUniform1f(6, .1 ) #rough
 	glUniform1f(7, 1.2) #IOR

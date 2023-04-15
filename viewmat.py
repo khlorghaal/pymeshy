@@ -46,8 +46,8 @@ def do(state,w,h):
 
     x= m[0]*6.28
     y= m[1]*3.14
-    v= matmul(roty(y),rotx(x))*exp(z*.25)
-    fov= .2
+    v= matmul(roty(-y),rotx(x))*exp(z*.25)
+    fov= .3
     p= array([
         [asp,0,  0, 0],
         [0,1,  0, 0],

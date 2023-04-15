@@ -43,16 +43,19 @@ vec3 reinhard(vec3 c, float e){
 	return c*(l1/l);
 }
 
-//vec3 env(vec3 V){
-//	V = V*V;
-//	//V= lerp(V,V*V,.99);
-//	float l= sum(V);
-//	return vec3(l);
-//}
+vec3 env(vec3 V){
+	V= norm(V);
+	V = V*V*V;
+	V= abs(V);
+	float l= sum(V)/3;
+	l= sat(smoother(l));
+	return vec3(l);
+}
 
 #define GAUSS(x) exp(-x*x)
 
 vec3 nseN(vec3 v){
+	v+= ETA;//because ????? idk cube integer shite
 	v= floor(v*2);
 	return GAUSS(rand33(v));
 }
@@ -78,20 +81,18 @@ vec3 fresnel(vec3 R){
 
 vec4 reflact(vec3 R, vec3 N){
     vec3 ra= norm(R);
-    vec3 rc= R*1.;
+    vec3 rc= R;
     ra= -abs(ra);
-    rc= -abs(rc);
+    rc= abs(rc);
     //return abs(rc);
     
     //float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
-    float ior= 2.5;
+    float ior= 4.;
     float iorrcp= 1./ior;
     
 	vec3 p= rc;//position+near
 	vec3 v= norm(ra);//march velocity
 	vec3 a= BLACK;//accumulator
-	//N= vec3(ETA);//normal
-    ass(real(p+v+a+ra+rc),RED);
 	float m= 1.;// magnitude | final alpha
     count(bounces){
 		//march
@@ -116,7 +117,7 @@ vec4 reflact(vec3 R, vec3 N){
   
         dp= v*(dt+ETA*4.);//if very precisely into an edge, may diagonal leap, dependent on eta
         p+= dp;
-        N= ef-ceil(p);
+        N= ef-ceil(p);//floor for agressive
         N= norm(N);
 
         //brdf
@@ -159,7 +160,7 @@ void main(){
 	const vec3 V= BLUE;//view vector
 
 	vec3 nse0=
-		nseN( Pm )*rough;
+		nseN(Pm)*rough;
 		//nseUV(UV)*rough;
 
 	N= N + nse0;
@@ -167,14 +168,6 @@ void main(){
 	
     //alb= vec3(tri( lum(nse0)*80.5 + time*.2 )*.9+.1);
 	vec3 c= BLACK;
-
-	vec3 emi= vec3(lum(((tri( (alb)*32. + time*.65 )))));//*alb
-	emi*= sat(abs(dot(V,N))*1.25+.25);//slight directional lobe
-	float lemi= lum(emi);
-	lemi*= lemi;//hea isa braight ladde
-	emi*= lemi;
-	//c+= emi;
-	//DBREAK(emi);
 	
 	//fresnel reflection, viewspace, non environmental
 	vec3 rfl= reflect(V,N);
@@ -182,16 +175,16 @@ void main(){
 
 	//c= WHITE/16;
 	float a= 1.;
-	vec4 rfr= reflact(Vm, N);
+	vec4 rfr= reflact(norm(Vm), N);
 	//DBREAK(rfr.rgb);
 	a= rfr.a;
 	c+= rfr.rgb;
 
-	//c+= env(rfl)*.2;
+	c+= env(rfl)*((rfr.rgb))*.25;
 	
 	c+= FR;
 
-	c= reinhard(c*1.,1.125);
+	c= reinhard(c*1.,1.420);
 	//const float GAMMA= 1.0;
 	//c= pows(c,GAMMA);
 	//#define SRGB 1//srgb framebuffer is a fuck???
