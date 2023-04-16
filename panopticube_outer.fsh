@@ -19,29 +19,16 @@ out vec4 fragColor;
 
 
 layout(location=2) uniform float time;
-layout(location=3) uniform vec3 ambient;
-layout(location=4) uniform vec3 reflective;
-layout(location=5) uniform vec3 albedo;
-layout(location=6) uniform float rough;
-layout(location=7) uniform float IOR;
+layout(location=6) uniform float rough;//uh todo (never)
+
+layout(location= 9) uniform sampler2D tex0;
+layout(location=10) uniform sampler2D tex1;
+layout(location=11) uniform sampler2D tex2;
+
 layout(location=8) uniform float FRm;//fresnel magnitude
 
-uniform sampler2D tex0;
 
 
-const vec3 col_x= vec3(.75,.125,0)*1.;
-const vec3 col_y= vec3(0,.75,.125)*1.;
-const vec3 col_z= vec3(.125,0,.75)*1.;
-
-const int bounces= 2;
-const float TRANSMITTANCE= .82;//~.82 consistently magical, idfk why
-
-
-vec3 reinhard(vec3 c, float e){
-	float l = maxv(c);
-	float l1= l*(1+(l/(e*e)))/(1+l);
-	return c*(l1/l);
-}
 
 vec3 env(vec3 V){
 	V= norm(V);
@@ -75,7 +62,6 @@ void main(){
 	vec3  N= norm(normal);//viewspace
 	vec3 N0= N;
 
-	vec3 alb= unsrgb(tex(tex0, UV).rgb);
 	//DBREAK(alb)
 
 	const vec3 V= BLUE;//view vector
@@ -87,25 +73,37 @@ void main(){
 	N= N + nse0;
 	N= norm(N);
 	
-	vec3 c= BLACK;
 
+	vec4 talb= tex(tex0,UV);
+	vec4 tflw= tex(tex1,UV);
+	vec4 temi= tex(tex2,UV);
+	vec3 alb= talb.rgb;
+	vec1 flw= tflw.g;
+	vec3 emi= temi.rgb*temi.a;//premul
 
-	vec3 emi= vec3(lum(((tri( (alb)*14. + time*2. )))));
-	emi= lerp(emi,alb, sat(len(prod(alb)-alb)));
-	float lemi= lum(emi);//hea isa braight ladde
-	lemi*= sat(abs(dot(V,N))*1.5+.5);//directional lobe
-	emi*= alb*lemi;
-	float a= sat(lemi*lemi*2.+.125);
-	c+= emi*1.5;
-	//DBREAK(emi);
+	vec3 c= alb*.85;//darken albedo
+	float a= .75*talb.a;//heuristic albedo-alpha
+	a= max(a,temi.a);
+
+	float lal= lum(alb)+.25;
+	a*= smoother(lal);
+
 	
-	//fresnel reflection, viewspace, non environmental
+	{//emission
+		float a= temi.a;
+		float l= tri( (flw.x)*12. + time*2.5 );
+		l*= sat(abs(dot(V,N))*2.);//brdf lobe, decrease energy towards tangent
+		//l= pow(l,.85);//gamma
+		c= lerp(c,emi,l*a);
+	}
+
+	//viewspace reflection
 	vec3 rfl= reflect(norm(Vm),N);
 
-	vec3 FR;
+	vec3 FR;//esnel
 	{
 		vec3 R= rfl;
-		float a= R.z;
+		float a= abs(R.z);
 		a*= a*a;//ramp
 		float w= a*a*a;//white component, narrower angle
 		a*= FRm;//magnitude
@@ -115,18 +113,17 @@ void main(){
 		c+= w;//white
 		FR= c;
 	}
+	c+= FR;
 
 	//c= WHITE/16;
 	vec3 re= env(rfl);
-	c+= re*alb*.75;
+	c+= re*alb;
 	//DBREAK(re.x)
 	//a*= 1-re.x;
 	//a*= 1-(rfr.a*.5);//high alpha is less transmission => less alpha
 
 	//c+= env(rfl)*.2;
 	
-	c+= FR*2.;
-	//DBREAK(FR)
 
 	c= reinhard(c*1.,1.25);
 

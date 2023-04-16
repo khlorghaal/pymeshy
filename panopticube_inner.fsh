@@ -33,15 +33,9 @@ const vec3 col_x= vec3(.75,.125,0)*1.8;
 const vec3 col_y= vec3(0,.75,.125)*1.8;
 const vec3 col_z= vec3(.125,0,.75)*1.8;
 
-const int bounces= 7;
+const int bounces= 5;
 const float TRANSMITTANCE= .85;//~.82 consistently magical, idfk why
 
-
-vec3 reinhard(vec3 c, float e){
-	float l = maxv(c);
-	float l1= l*(1+(l/(e*e)))/(1+l);
-	return c*(l1/l);
-}
 
 vec3 env(vec3 V){
 	V= norm(V);
@@ -87,7 +81,7 @@ vec4 reflact(vec3 R, vec3 N){
     //return abs(rc);
     
     //float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
-    float ior= 4.;
+    float ior= 2.5;
     float iorrcp= 1./ior;
     
 	vec3 p= rc;//position+near

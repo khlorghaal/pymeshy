@@ -3,7 +3,7 @@ from time import *
 from math import *
 
 ANIM= True
-DANCE= True
+DANCE= False
 frame=0# int #set manually if anim is off
 t= 0 #float seconds
 
@@ -62,34 +62,44 @@ glEnable(GL_DEBUG_OUTPUT)
 glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS)
 '''
 
-img= None
-tex= None
-def loadtex():
-	global img
-	try:
-		img= png.Reader('tex.png').read() #(width, height, values, info)
-		img_w= img[0]
-		img_h= img[1]
-		img_rast= np.flip(np.array(list(img[2]),dtype='uint8'),0).flatten()
-		assert(len(img_rast)==img_w*img_h*4)
-	except Exception as e:
-		print(e)
-		img_rast= np.zeros(w*h*4)
+tex_alb= None
+tex_flw= None
+tex_emi= None
+def loadtexes():
+	def loadtex(f,i=0):
+		try:
+			img= png.Reader(f).read() #(width, height, values, info)
+			img_w= img[0]
+			img_h= img[1]
+			img_rast= np.flip(np.array(list(img[2]),dtype='uint8'),0).flatten()
+			assert(len(img_rast)==img_w*img_h*4)
+		except Exception as e:
+			print(e)
+			img_rast= np.zeros(w*h*4)
 
-	global tex
-	if tex!=None:
-		glDeleteTextures(tex)
-	tex= glGenTextures(1)
-	glBindTexture(GL_TEXTURE_2D, tex);
-	glActiveTexture(GL_TEXTURE0)
-	MIPS= 4
-	glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_SRGB8, img_w,img_h)#memory uninitialized, inits mipmap level range
-	glTexSubImage2D(GL_TEXTURE_2D, 0,0,0, img_w,img_h, GL_RGBA, GL_UNSIGNED_BYTE, img_rast)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MIPS)
-	glGenerateMipmap(GL_TEXTURE_2D)
-
+		tex= glGenTextures(1)
+		glActiveTexture(GL_TEXTURE0+i)
+		glBindTexture(GL_TEXTURE_2D, tex);
+		MIPS= 4
+		glTexStorage2D(GL_TEXTURE_2D, MIPS, GL_RGBA8, img_w,img_h)#memory uninitialized, inits mipmap level range
+		glTexSubImage2D(GL_TEXTURE_2D, 0,0,0, img_w,img_h, GL_RGBA, GL_UNSIGNED_BYTE, img_rast)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MIPS)
+		glGenerateMipmap(GL_TEXTURE_2D)
+		return tex
+	
+	global tex_alb
+	global tex_flw
+	global tex_emi
+	def chd(t): 
+		if t!=None:	glDeleteTextures(t)
+	chd(tex_alb)
+	chd(tex_flw)
+	chd(tex_emi)
+	tex_alb= loadtex('tex_albedo.png',   0)
+	tex_flw= loadtex('tex_flow.png',     1)
+	tex_emi= loadtex('tex_emission.png', 2)
 
 prog_outer= None
 prog_inner= None
@@ -172,7 +182,6 @@ def render():
 	glUniform3f(4, 0.1 ,0.6 ,1.  )#reflective
 	glUniform3f(5, 0.7 , .85,0.95)#albedo
 	glUniform1f(6, .5 ) #rough
-	glUniform1f(7, 1.2) #IOR
 	glUniform1f(8, .4) #fresnel magnitude
 
 	glEnable(GL_BLEND)
@@ -199,14 +208,13 @@ def render():
 	mmv[10]*= 1.5
 	glUniformMatrix4fv(0,1,True,mmv)
 	glUniformMatrix4fv(1,1,True,mp)
-	glUniform1f(2, t) #t
-	glUniform3f(3, 0.05,0.05,0.05)#ambient
-	glUniform3f(4, 0.2 ,0.2 ,.2  )#reflective
-	glUniform3f(5, 0.7 , .85,0.95)#albedo
-	glUniform1f(6, .1 ) #rough
-	glUniform1f(7, 1.2) #IOR
+	glUniform1f(2, t)#ime
+	glUniform1f(6, .2 )#rough
 	glUniform1f(8, .4) #fresnel magnitude
 
+	glUniform1i( 9, 0)#tex
+	glUniform1i(10, 1)
+	glUniform1i(11, 2)
 	mesh()
 
 	pygame.display.flip()
@@ -227,7 +235,7 @@ def loop():
 			#todo file modify hook
 			try:
 				loadprogs()
-				loadtex()
+				loadtexes()
 			except Exception as e:
 				print('bad '+str(e))
 

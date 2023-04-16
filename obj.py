@@ -31,7 +31,9 @@ def load(file):
 			's' : []
 		}[ l[0] ]+=[ l[1:] ]
 
-	parsevv= lambda vv: [ tuple(float(t) for t in v) for v in vv  ]
+	parsevv= lambda vv: [ tuple( \
+		float(t) for t in v ) \
+			for v in vv  ]
 	p= parsevv(p)
 	t= parsevv(t)
 	n= parsevv(n)
