@@ -3,7 +3,7 @@ from time import *
 from math import *
 
 ANIM= True
-DANCE= False
+DANCE= True
 frame=0# int #set manually if anim is off
 t= 0 #float seconds
 
@@ -144,8 +144,9 @@ def loadprogs():
 	prog_outer= a("panopticube_outer.fsh")
 
 import obj
-mesh= obj.load('cube_uvn.obj')
+#mesh= obj.load('cube_uvn.obj')
 #mesh= obj.load('caveblocks.obj')
+mesh= obj.load('sphere.obj')
 
 
 

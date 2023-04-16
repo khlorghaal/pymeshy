@@ -52,13 +52,17 @@ def load(file):
 	t_b=[]
 	n_b=[]
 
+	triangulator= {
+		3:[0,1,2],#tri
+ 		4:[0,1,2,0,2,3],#quad
+ 		#ngons fukkin die
+ 	}
 	for l in f:#face entry; indices; [ face-list [face (vi,ni,ui),..],.. ]
 		p_i=[]
 		t_i=[]
 		n_i=[]
 		l= [ _.split('/') for _ in l ]
 		for w in l:#face vertex-data
-			assert(len(l)==4)
 			vi= int(w[0])
 			ti=0
 			if len(w) >= 2 and len(w[1]) > 0:
@@ -69,7 +73,8 @@ def load(file):
 			p_i+= [vi-1]
 			t_i+= [ti-1]
 			n_i+= [ni-1]
-		for i in [0,1,2,0,2,3]:#triangulate
+			
+		for i in triangulator[len(l)]:
 			p_b+= p[p_i[i]]
 			t_b+= t[t_i[i]]
 			n_b+= n[n_i[i]]

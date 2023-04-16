@@ -127,6 +127,7 @@ void main(){
 
 	c= reinhard(c*1.,1.25);
 
+	a= 0;
 	//c= lerp(norm(c),vec3(lum(c)),.2);
 
 	//const float GAMMA= .5;

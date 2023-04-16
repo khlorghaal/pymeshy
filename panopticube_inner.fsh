@@ -48,11 +48,6 @@ vec3 env(vec3 V){
 
 #define GAUSS(x) exp(-x*x)
 
-vec3 nseN(vec3 v){
-	v+= ETA;//because ????? idk cube integer shite
-	v= floor(v*2);
-	return GAUSS(rand33(v));
-}
 //vec3 nseUV(vec2 uv){
 //	float a= dot(tex(tex0,uv).rgb,vec3(.3,.55,.15));//luminance
 //	//a= sqrt(a);//contrast
@@ -62,7 +57,7 @@ vec3 nseN(vec3 v){
 //}
 
 vec3 fresnel(vec3 R){
-	float a= R.z;
+	float a= sat(R.z);
 	a*= a*a*a;//ramp
 	float w= a*a*a;//white component, narrower angle
 	a*= FRm;//magnitude
@@ -75,13 +70,13 @@ vec3 fresnel(vec3 R){
 
 vec4 reflact(vec3 R, vec3 N){
     vec3 ra= norm(R);
-    vec3 rc= R;
+    vec3 rc= R*2;
     ra= -abs(ra);
     rc= abs(rc);
     //return abs(rc);
     
     //float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
-    float ior= 2.5;
+    float ior= 4.;
     float iorrcp= 1./ior;
     
 	vec3 p= rc;//position+near
@@ -120,7 +115,7 @@ vec4 reflact(vec3 R, vec3 N){
               C.x*col_x
             + C.y*col_y
             + C.z*col_z;
-        const float h= .420;
+        const float h= .5;
         float l= sat(len(dp)-h);
         c*= l;
         //c= vec3(lum(c));
@@ -153,11 +148,6 @@ void main(){
 	
 	const vec3 V= BLUE;//view vector
 
-	vec3 nse0=
-		nseN(Pm)*rough;
-		//nseUV(UV)*rough;
-
-	N= N + nse0;
 	N= norm(N);
 	
     //alb= vec3(tri( lum(nse0)*80.5 + time*.2 )*.9+.1);
@@ -174,11 +164,11 @@ void main(){
 	a= rfr.a;
 	c+= rfr.rgb;
 
-	c+= env(rfl)*((rfr.rgb))*.25;
+	c+= env(rfl)*((rfr.rgb))*.5;
 	
-	c+= FR;
+	c+= FR*8;
 
-	c= reinhard(c*1.,1.420);
+	c= reinhard(c*1.,1.0);
 	//const float GAMMA= 1.0;
 	//c= pows(c,GAMMA);
 	//#define SRGB 1//srgb framebuffer is a fuck???
