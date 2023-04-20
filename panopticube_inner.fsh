@@ -80,7 +80,6 @@ vec4 reflact(vec3 R, vec3 N){
     rc= abs(rc);
     //return abs(rc);
     
-    //float ior= sin(time*2.)*-.4 + sin(time*3.5)*.5 + 1.25;
     float ior= 2.5;
     float iorrcp= 1./ior;
     
@@ -123,18 +122,11 @@ vec4 reflact(vec3 R, vec3 N){
         const float h= .420;
         float l= sat(len(dp)-h);
         c*= l;
-        //if(!real(N))
-        //	return vec4(MAGENTA*8,1);
-        //c= vec3(lum(c));
 
         a+= c*m;
         m*= TRANSMITTANCE;
       
 	}
-
-    float cnorm= 1.;///(1.-pow(1.-TRANSMITTANCE,float(maxb)));
-    //empirical luminance normalization
-    //meaning i have no fucking clue how it do
     
     //return vec4(abs(N),m);
     return vec4(a,m);
@@ -162,14 +154,12 @@ void main(){
 	N= N + nse0;
 	N= norm(N);
 	
-    //alb= vec3(tri( lum(nse0)*80.5 + time*.2 )*.9+.1);
 	vec3 c= BLACK;
 	
 	//fresnel reflection, viewspace, non environmental
 	vec3 rfl= reflect(V,N);
 	vec3 FR= fresnel(rfl);//color
 
-	//c= WHITE/16;
 	float a= 1.;
 	vec4 rfr= reflact(norm(Vm), N);
 	//DBREAK(rfr.rgb);
@@ -183,7 +173,7 @@ void main(){
 	c= reinhard(c*1.,1.420);
 	//const float GAMMA= 1.0;
 	//c= pows(c,GAMMA);
-	//#define SRGB 1//srgb framebuffer is a fuck???
+	//#define SRGB 1
 
 	#ifdef OPAQUE
 		a= 1.;

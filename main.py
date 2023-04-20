@@ -6,6 +6,7 @@ from numpy import sign
 
 ANIM= True
 DANCE= True
+mood= 'meh'
 frame=0# int #set manually if anim is off
 t= 0 #float seconds
 
@@ -168,7 +169,6 @@ def render():
 
 	glUseProgram(prog_inner)
 
-	mood= 'happy'
 	if ANIM and DANCE:
 		if mood=='meh':
 			yaw= sin(t*.2)

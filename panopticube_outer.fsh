@@ -83,7 +83,6 @@ void main(){
 
 	vec3 c= alb*.75;//darken albedo
 	float a= .7*talb.a;//heuristic albedo-alpha
-	//a= max(a,temi.a); opaque on flows
 
 	float lal= lum(alb)+.25;
 	a*= smoother(lal);
@@ -97,7 +96,7 @@ void main(){
 		//l= pow(l,.85);//gamma
 
 		float la= l*temi.a;
-		c-= c*la;
+		c-= c*la*la;//preserve emission hue
 		c+= emi*1.*la;
 		a+= la;
 	}
@@ -120,18 +119,10 @@ void main(){
 	}
 	c+= FR;
 
-	//c= WHITE/16;
-	vec3 re= env(rfl);
-	c+= re*alb*.7;
-	//DBREAK(re.x)
-	//a*= 1-re.x;
-	//a*= 1-(rfr.a*.5);//high alpha is less transmission => less alpha
-
-	//c+= env(rfl)*.2;
+	//environment reflection
+	c+= env(rfl)*alb*.7;
 	
 	c= reinhard(c*1.,1.125);
-
-	//c= lerp(norm(c),vec3(lum(c)),.2);
 
 	//const float GAMMA= .5;
 	//c= pows(c,GAMMA);
