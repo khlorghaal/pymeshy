@@ -97,6 +97,7 @@ void main(){
 		//l= pow(l,.85);//gamma
 
 		float la= l*temi.a;
+		c-= c*la;
 		c+= emi*1.*la;
 		a+= la;
 	}

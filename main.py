@@ -168,7 +168,7 @@ def render():
 
 	glUseProgram(prog_inner)
 
-	mood= 'meh'
+	mood= 'happy'
 	if ANIM and DANCE:
 		if mood=='meh':
 			yaw= sin(t*.2)
