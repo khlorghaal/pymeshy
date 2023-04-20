@@ -1,9 +1,11 @@
 from com import *
 from time import *
 from math import *
+from random import random as rand
+from numpy import sign
 
 ANIM= True
-DANCE= False
+DANCE= True
 frame=0# int #set manually if anim is off
 t= 0 #float seconds
 
@@ -156,21 +158,39 @@ glViewport(0,0,w,h)
 
 import viewmat
 view= viewmat.state()
-#view.m[1]= -.2#initial rotation
-view.m[0]= 3/8
-view.m[1]= 1/4.5
+#view.r[1]= -.2#initial rotation
+view.r[0]= 3/8
+view.r[1]= 1/4.5
 
 def render():
-	glClearColor(0,0,0,0)
+	glClearColor(0.01,0.01,0.01,0)
 	glClear(GL_COLOR_BUFFER_BIT+GL_DEPTH_BUFFER_BIT)
 
 	glUseProgram(prog_inner)
 
-	#dance
+	mood= 'meh'
 	if ANIM and DANCE:
-		view.m[0]+= sin(t* 6  )*.008  \
-				   +sin(t*  .6)*.005
-		view.m[1]+= cos(t*14  )*.015
+		if mood=='meh':
+			yaw= sin(t*.2)
+			yaw*= abs(yaw)
+			view.r[0]+= yaw*.002
+
+			roll= sin(t*.1 )
+			roll= pow(abs(roll),420)*sign(roll)
+			view.r[1]+= roll*.06
+
+			view.s= .75
+
+		if mood=='happy':
+			view.r[0]+= sin(t* 6 )*.008  \
+					   +sin(t* .6)*.005
+			view.r[1]+= cos(t*14 )*.015
+
+			view.s= .8
+
+		if mood=='angery':
+			view.s= .7+sin(t*TAU*14.321+3)/24
+			view.r[0]+= 0 if rand()<.98 else 1/4
 
 	vm= view.do(w,h)
 	mmv= vm.v
@@ -196,21 +216,20 @@ def render():
 	mesh()
 
 	glUseProgram(prog_outer)
+	if mood=='meh':
+		view.s= 1.0
+	if mood=='happy':
+		view.s= 1.0
+	if mood=='angery':
+		view.s= 1.5+sin(t*TAU*16.543)/16
 	vm= view.do(w,h)#outer cube
-	mmv[ 0]*= 1.5#fuck god forgive me 
-	mmv[ 1]*= 1.5
-	mmv[ 2]*= 1.5
-	mmv[ 4]*= 1.5
-	mmv[ 5]*= 1.5
-	mmv[ 6]*= 1.5
-	mmv[ 8]*= 1.5
-	mmv[ 9]*= 1.5
-	mmv[10]*= 1.5
+	mmv= vm.v
+	mp=  vm.p
 	glUniformMatrix4fv(0,1,True,mmv)
 	glUniformMatrix4fv(1,1,True,mp)
 	glUniform1f(2, t)#ime
 	glUniform1f(6, .2 )#rough
-	glUniform1f(8, .4) #fresnel magnitude
+	glUniform1f(8, .25) #fresnel magnitude
 
 	glUniform1i( 9, 0)#tex
 	glUniform1i(10, 1)
@@ -251,7 +270,7 @@ def loop():
 					cy= h-cy - h//2
 					cx/= w
 					cy/= h
-					view.m= [cx,cy]
+					view.r= [cx,cy]
 
 			if e.type==TEXTINPUT:
 				continue

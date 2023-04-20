@@ -50,7 +50,7 @@ vec3 env(vec3 V){
 
 vec3 nseN(vec3 v){
 	v+= ETA;//because ????? idk cube integer shite
-	v= floor(v*2);
+	v= floor(v*4);
 	return GAUSS(rand33(v));
 }
 //vec3 nseUV(vec2 uv){
@@ -109,10 +109,10 @@ vec4 reflact(vec3 R, vec3 N){
 
 		v= norm(v);
   
-        dp= v*(dt+ETA*4.);//if very precisely into an edge, may diagonal leap, dependent on eta
+        dp= v*(dt+ETA);//if very precisely into an edge, may diagonal leap, dependent on eta
         p+= dp;
         N= ef-ceil(p);//floor for agressive
-        N= norm(N);
+        N= norm(nozero(N));
 
         //brdf
         vec3 C= abs(norm(N));
@@ -123,6 +123,8 @@ vec4 reflact(vec3 R, vec3 N){
         const float h= .420;
         float l= sat(len(dp)-h);
         c*= l;
+        //if(!real(N))
+        //	return vec4(MAGENTA*8,1);
         //c= vec3(lum(c));
 
         a+= c*m;

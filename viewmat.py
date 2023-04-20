@@ -27,7 +27,9 @@ from dataclasses import dataclass
 
 @dataclass
 class state:
-    m= [0,0]
+    r= [0,0]
+    t= [0,0,0]
+    s= 1
     z= -6
     def do(*a): return do(*a)
 
@@ -40,12 +42,13 @@ class mats:
 def do(state,w,h):
     v= identity(3,dtype='float')#view
     p= identity(4,dtype='float')#projection
-    m= state.m
+    r= state.r
     z= state.z
+    s= state.s
     asp= h/w
 
-    x= m[0]*6.28
-    y= m[1]*3.14
+    x= r[0]*6.28
+    y= r[1]*3.14
     v= matmul(roty(-y),rotx(x))*exp(z*.25)
     fov= .3
     p= array([
@@ -55,6 +58,8 @@ def do(state,w,h):
         [0,0,fov, 1]
         ])
     v= pad(v,(0,1),mode='constant',constant_values=0)
+    v*= s
+
     v[-1,-1]=1
     v=v.flatten()
     p=p.flatten()

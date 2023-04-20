@@ -81,20 +81,24 @@ void main(){
 	vec1 flw= tflw.g;
 	vec3 emi= temi.rgb*temi.a;//premul
 
-	vec3 c= alb*.85;//darken albedo
-	float a= .75*talb.a;//heuristic albedo-alpha
-	a= max(a,temi.a);
+	vec3 c= alb*.75;//darken albedo
+	float a= .7*talb.a;//heuristic albedo-alpha
+	//a= max(a,temi.a); opaque on flows
 
 	float lal= lum(alb)+.25;
 	a*= smoother(lal);
 
 	
 	{//emission
-		float a= temi.a;
-		float l= tri( (flw.x)*12. + time*2.5 );
+		const float flow_rate= 1.5;
+		const float flow_freq= 5.;
+		float l= tri( (flw.x)*flow_freq + time*flow_rate );
 		l*= sat(abs(dot(V,N))*2.);//brdf lobe, decrease energy towards tangent
 		//l= pow(l,.85);//gamma
-		c= lerp(c,emi,l*a);
+
+		float la= l*temi.a;
+		c+= emi*1.*la;
+		a+= la;
 	}
 
 	//viewspace reflection
@@ -117,15 +121,14 @@ void main(){
 
 	//c= WHITE/16;
 	vec3 re= env(rfl);
-	c+= re*alb;
+	c+= re*alb*.7;
 	//DBREAK(re.x)
 	//a*= 1-re.x;
 	//a*= 1-(rfr.a*.5);//high alpha is less transmission => less alpha
 
 	//c+= env(rfl)*.2;
 	
-
-	c= reinhard(c*1.,1.25);
+	c= reinhard(c*1.,1.125);
 
 	//c= lerp(norm(c),vec3(lum(c)),.2);
 
